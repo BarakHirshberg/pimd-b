@@ -138,6 +138,10 @@ public:
     void updatePhysicalForces(dVec& physical_force_arr) const;
 
     double classicalSpringEnergy() const;
+    // Boltzmann-weight energy of this rank's interior links: -(1/beta_P) sum ln mu(d) with winding-sum
+    // springs (equal to classicalSpringEnergy() with minimum-image springs). Use this, not the
+    // spring-energy EXPECTATION returned by classicalSpringEnergy() in winding mode, in acceptance tests.
+    double interiorSpringWeightEnergy() const;
 
     void getNextCoords(dVec& next);
     void getPrevCoords(dVec& prev);

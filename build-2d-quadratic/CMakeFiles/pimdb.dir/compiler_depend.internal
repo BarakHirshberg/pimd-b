@@ -2012,6 +2012,7 @@ CMakeFiles/pimdb.dir/src/moves/exchange_move.cpp.o
  /storage/debug_He/external/pimd-b/include/potentials/potential.h
  /storage/debug_He/external/pimd-b/include/simulation.h
  /storage/debug_He/external/pimd-b/include/units.h
+ /storage/debug_He/external/pimd-b/include/winding.h
  /storage/debug_He/external/pimd-b/libs/inireader.h
  /storage/debug_He/external/pimd-b/libs/random_mars.h
 

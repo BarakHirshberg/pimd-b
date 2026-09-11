@@ -525,6 +525,22 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
  *
  * @return Classical spring energy contribution of the current and the previous time-slice.
  */
+double Simulation::interiorSpringWeightEnergy() const {
+    if (!winding_springs) {
+        return classicalSpringEnergy();
+    }
+    double energy = 0.0;
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        double diff[NDIM];
+        for (int axis = 0; axis < NDIM; ++axis) {
+            diff[axis] = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+            applyMinimumImage(diff[axis], size);
+        }
+        energy -= linkLogWeight(diff) / thermo_beta;
+    }
+    return energy;
+}
+
 double Simulation::classicalSpringEnergy() const {
     assert(!bosonic || (bosonic && this_bead != 0));
 

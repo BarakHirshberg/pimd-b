@@ -36,13 +36,14 @@ void TimeShiftMove::rotate(int shift) {
 }
 
 /**
- * @brief Total classical spring energy: interior springs of ranks 1..P-1 plus the bosonic exterior
- * potential V_B (rank 0). The result is valid on rank 0 only.
+ * @brief Total spring "energy" entering the Boltzmann weight: the interior links of ranks 1..P-1
+ * ((k/2) d^2, or -(1/beta_P) ln mu(d) with winding-sum springs) plus the bosonic exterior potential
+ * V_B (rank 0). The result is valid on rank 0 only.
  */
 double TimeShiftMove::totalSpringEnergy() const {
     double local = 0.0;
     if (sim.this_bead != 0) {
-        local = sim.classicalSpringEnergy();
+        local = sim.interiorSpringWeightEnergy();
     } else {
         sim.bosonic_exchange->prepare();
         local = sim.bosonic_exchange->effectivePotential();
