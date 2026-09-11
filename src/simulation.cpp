@@ -11,6 +11,7 @@
 #include "propagators.h"
 #include "thermostats.h"
 #include "normal_modes.h"
+#include "moves.h"
 #include "simulation.h"
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
@@ -98,6 +99,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
+
+    initializeMoves(param_obj.sim);
 
     initializeStates(param_obj.states);
     initializeObservables(param_obj.observables);
@@ -260,6 +263,21 @@ void Simulation::run() {
         // Zero momentum after every thermostat step (if needed)
         if (fixcom) {
             zeroMomentum();
+        }
+
+        // Monte Carlo relabelling of the particles (bosonic simulations, if enabled)
+        if (relabel && step % relabel_freq == 0) {
+            relabel_move->attempt();
+        }
+
+        // Monte Carlo exchange move: regrow exterior segments onto the swapped/identity closure
+        if (exchange_move && step % exchange_freq == 0) {
+            exchange_mc->attempt();
+        }
+
+        // Imaginary-time shift: move the exchange slice boundary (labels only)
+        if (timeshift && step % timeshift_freq == 0) {
+            timeshift_move->attempt();
         }
 
 
@@ -536,6 +554,18 @@ void Simulation::printReport(double wall_time) const {
 #endif
 
         report_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);
+        if (relabel) {
+            report_file << formattedReportLine("Relabelling move", std::format("every {} steps", relabel_freq));
+            report_file << formattedReportLine("Relabelling acceptance", relabel_move->acceptanceRatio());
+        }
+        if (timeshift) {
+            report_file << formattedReportLine("Time-shift move", std::format("every {} steps", timeshift_freq));
+            report_file << formattedReportLine("Time-shift acceptance", timeshift_move->acceptanceRatio());
+        }
+        if (exchange_move) {
+            report_file << formattedReportLine("Exchange move", std::format("every {} steps", exchange_freq));
+            report_file << formattedReportLine("Exchange move acceptance", exchange_mc->acceptanceRatio());
+        }
     } else {
         report_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
@@ -704,6 +734,52 @@ void Simulation::initializeExchangeAlgorithm() {
 }
 
 /**
+ * Initializes the optional Monte Carlo moves (currently the relabelling move).
+ *
+ * @param sim_params Simulation parameters.
+ */
+void Simulation::initializeMoves(const VariantMap& sim_params) {
+    getVariant(sim_params.at("relabel"), relabel);
+    getVariant(sim_params.at("relabel_freq"), relabel_freq);
+
+    // Relabelling requires bosonic exchange (bosonic may have been switched off for nbeads = 1)
+    relabel = relabel && bosonic && natoms > 1;
+
+    if (relabel) {
+        int attempts;
+        unsigned int seed;
+        getVariant(sim_params.at("relabel_attempts"), attempts);
+        getVariant(sim_params.at("relabel_seed"), seed);
+        relabel_move = std::make_unique<RelabelMove>(*this, std::get<std::string>(sim_params.at("relabel_mode")), attempts, seed);
+    }
+
+    getVariant(sim_params.at("exchange_move"), exchange_move);
+    getVariant(sim_params.at("exchange_freq"), exchange_freq);
+    exchange_move = exchange_move && bosonic && natoms > 1 && nbeads > 2;
+
+    getVariant(sim_params.at("timeshift"), timeshift);
+    getVariant(sim_params.at("timeshift_freq"), timeshift_freq);
+    timeshift = timeshift && bosonic && nbeads > 1;
+    if (timeshift) {
+        unsigned int seed;
+        getVariant(sim_params.at("timeshift_seed"), seed);
+        timeshift_move = std::make_unique<TimeShiftMove>(*this, seed);
+    }
+
+    if (exchange_move) {
+        int attempts, segment;
+        unsigned int seed;
+        getVariant(sim_params.at("exchange_attempts"), attempts);
+        getVariant(sim_params.at("exchange_segment"), segment);
+        getVariant(sim_params.at("exchange_seed"), seed);
+        if (segment <= 0) {
+            segment = nbeads / 2;
+        }
+        exchange_mc = std::make_unique<ExchangeMove>(*this, segment, attempts, seed);
+    }
+}
+
+/**
  * Initializes the positions of the particles based on the input parameters.
  *
  * @param[out] coord_arr Array to store the generated positions.
@@ -785,6 +861,7 @@ void Simulation::initializeStates(const StringMap& sim_params) {
     addStateIfEnabled(sim_params, "positions", "position");
     addStateIfEnabled(sim_params, "velocities", "velocity");
     addStateIfEnabled(sim_params, "forces", "force");
+    addStateIfEnabled(sim_params, "labels", "label");
 }
 
 /**
@@ -834,6 +911,18 @@ void Simulation::initializeObservables(const StringMap& sim_params) {
     }
 
     addObservableIfEnabled(sim_params, "rdf", "rdf");
+
+    if (relabel) {
+        addObservableIfEnabled(sim_params, "relabel", "relabel");
+    }
+
+    if (exchange_move) {
+        addObservableIfEnabled(sim_params, "exchange", "exchange");
+    }
+
+    if (timeshift) {
+        addObservableIfEnabled(sim_params, "timeshift", "timeshift");
+    }
 }
 
 /**

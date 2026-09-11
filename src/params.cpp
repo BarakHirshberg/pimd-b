@@ -46,6 +46,51 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     bool nmthermostat = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
     sim["nmthermostat"] = nmthermostat;
 
+    // Particle relabelling move (bosonic simulations only; see RelabelMove)
+    bool relabel = reader.GetBoolean(Sections::SIMULATION, "relabel", false);
+    sim["relabel"] = relabel;
+    std::string relabel_mode = reader.GetString(Sections::SIMULATION, "relabel_mode", "metropolis");
+    if (relabel_mode != "metropolis" && relabel_mode != "shuffle")
+        throw std::invalid_argument(std::format("The relabelling mode ({}) must be 'metropolis' or 'shuffle'!", relabel_mode));
+    sim["relabel_mode"] = relabel_mode;
+    sim["relabel_freq"] = reader.GetInteger(Sections::SIMULATION, "relabel_freq", 100);
+    if (int f = std::get<int>(sim["relabel_freq"]); f < 1)
+        throw std::invalid_argument(std::format("The relabelling frequency ({}) must be positive!", f));
+    sim["relabel_attempts"] = reader.GetInteger(Sections::SIMULATION, "relabel_attempts", 1);
+    if (int a = std::get<int>(sim["relabel_attempts"]); a < 1)
+        throw std::invalid_argument(std::format("The number of relabelling attempts ({}) must be positive!", a));
+    sim["relabel_seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "relabel_seed",
+        reader.Get(Sections::SIMULATION, "seed", "1234"))));
+    if (relabel && !bosonic)
+        throw std::invalid_argument("The relabelling move is only meaningful for bosonic simulations (bosonic = true)!");
+
+    // Exchange (segment regrowth) move for bosonic simulations; see ExchangeMove
+    bool exchange_move = reader.GetBoolean(Sections::SIMULATION, "exchange_move", false);
+    sim["exchange_move"] = exchange_move;
+    sim["exchange_freq"] = reader.GetInteger(Sections::SIMULATION, "exchange_freq", 100);
+    if (int f = std::get<int>(sim["exchange_freq"]); f < 1)
+        throw std::invalid_argument(std::format("The exchange move frequency ({}) must be positive!", f));
+    sim["exchange_attempts"] = reader.GetInteger(Sections::SIMULATION, "exchange_attempts", 1);
+    if (int a = std::get<int>(sim["exchange_attempts"]); a < 1)
+        throw std::invalid_argument(std::format("The number of exchange move attempts ({}) must be positive!", a));
+    // Maximum number of regrown beads per particle (0 = half of the beads)
+    sim["exchange_segment"] = reader.GetInteger(Sections::SIMULATION, "exchange_segment", 0);
+    sim["exchange_seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "exchange_seed",
+        reader.Get(Sections::SIMULATION, "seed", "1234"))));
+    if (exchange_move && !bosonic)
+        throw std::invalid_argument("The exchange move is only meaningful for bosonic simulations (bosonic = true)!");
+
+    // Imaginary-time shift move (cyclic renumbering of the beads); see TimeShiftMove
+    bool timeshift = reader.GetBoolean(Sections::SIMULATION, "timeshift", false);
+    sim["timeshift"] = timeshift;
+    sim["timeshift_freq"] = reader.GetInteger(Sections::SIMULATION, "timeshift_freq", 100);
+    if (int f = std::get<int>(sim["timeshift_freq"]); f < 1)
+        throw std::invalid_argument(std::format("The time-shift frequency ({}) must be positive!", f));
+    sim["timeshift_seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "timeshift_seed",
+        reader.Get(Sections::SIMULATION, "seed", "1234"))));
+    if (timeshift && !bosonic)
+        throw std::invalid_argument("The time-shift move is only meaningful for bosonic simulations (bosonic = true)!");
+
     std::string init_pos_type, init_pos_specification;
 
     if (!parseTokenParentheses(reader.Get(Sections::SIMULATION, "initial_position", "random"), init_pos_type,
@@ -250,6 +295,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     states["positions"] = reader.Get(Sections::OUTPUT, "positions", "off");
     states["velocities"] = reader.Get(Sections::OUTPUT, "velocities", "off");
     states["forces"] = reader.Get(Sections::OUTPUT, "forces", "off");
+    states["labels"] = reader.Get(Sections::OUTPUT, "labels", "off");
 
     /****** Observables ******/
 
@@ -263,6 +309,9 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     observables["permutation"] = reader.Get(Sections::OBSERVABLES, "permutation", "off");
     observables["winding"] = reader.Get(Sections::OBSERVABLES, "winding", "off");
     observables["rdf"] = reader.Get(Sections::OBSERVABLES, "rdf", "off");
+    observables["relabel"] = reader.Get(Sections::OBSERVABLES, "relabel", "off");
+    observables["exchange"] = reader.Get(Sections::OBSERVABLES, "exchange", "off");
+    observables["timeshift"] = reader.Get(Sections::OBSERVABLES, "timeshift", "off");
 
     // Settings of the above observables (stored with the simulation parameters)
     sim["n_perm_samples"] = reader.GetInteger(Sections::OBSERVABLES, "n_perm_samples", 1);

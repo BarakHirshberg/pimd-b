@@ -8,3 +8,6 @@
 #include "observables/connection.h"
 #include "observables/permutation.h"
 #include "observables/rdf.h"
+#include "observables/relabel.h"
+#include "observables/exchange.h"
+#include "observables/timeshift.h"

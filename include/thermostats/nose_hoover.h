@@ -34,6 +34,7 @@ public:
     ~NoseHooverNpThermostat() override = default;
 
     void momentaUpdate() override;
+    void swapParticles(int i, int j) override;
     double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 };
 
@@ -45,5 +46,6 @@ public:
     ~NoseHooverNpDimThermostat() override = default;
 
     void momentaUpdate() override;
+    void swapParticles(int i, int j) override;
     double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 };

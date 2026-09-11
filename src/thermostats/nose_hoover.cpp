@@ -5,6 +5,7 @@
 #include "normal_modes.h"
 
 #include <numbers>
+#include <utility>
 
 // A class for a single Nose-Hoover chain coupled to all degrees of freedom
 NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains) : Thermostat(
@@ -181,6 +182,18 @@ void NoseHooverNpThermostat::momentaUpdate() {
     }
 }
 
+/**
+ * @brief Swaps the chain variables of particles i and j (blocks of nchains entries).
+ */
+void NoseHooverNpThermostat::swapParticles(int i, int j) {
+    if (i == j) return;
+    for (int c = 0; c < nchains; ++c) {
+        std::swap(eta[i * nchains + c], eta[j * nchains + c]);
+        std::swap(eta_dot[i * nchains + c], eta_dot[j * nchains + c]);
+        std::swap(eta_dot_dot[i * nchains + c], eta_dot_dot[j * nchains + c]);
+    }
+}
+
 double NoseHooverNpThermostat::getAdditionToH() {
     double additionToH = 0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
@@ -218,6 +231,19 @@ void NoseHooverNpDimThermostat::momentaUpdate() {
             double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
             momentum_for_update = momentum_for_calc * scale;
         }
+    }
+}
+
+/**
+ * @brief Swaps the chain variables of all degrees of freedom of particles i and j.
+ */
+void NoseHooverNpDimThermostat::swapParticles(int i, int j) {
+    if (i == j) return;
+    const int block = NDIM * nchains;
+    for (int c = 0; c < block; ++c) {
+        std::swap(eta[i * block + c], eta[j * block + c]);
+        std::swap(eta_dot[i * block + c], eta_dot[j * block + c]);
+        std::swap(eta_dot_dot[i * block + c], eta_dot_dot[j * block + c]);
     }
 }
 

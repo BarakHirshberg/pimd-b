@@ -300,6 +300,7 @@ CMakeFiles/pimdb.dir/src/simulation.cpp.o: \
  /storage/debug_He/external/pimd-b/include/states/position.h \
  /storage/debug_He/external/pimd-b/include/states/velocity.h \
  /storage/debug_He/external/pimd-b/include/states/force.h \
+ /storage/debug_He/external/pimd-b/include/states/label.h \
  /storage/debug_He/external/pimd-b/include/observables.h \
  /storage/debug_He/external/pimd-b/include/observables/observable.h \
  /storage/debug_He/external/pimd-b/libs/ordered_map.h \
@@ -362,6 +363,9 @@ CMakeFiles/pimdb.dir/src/simulation.cpp.o: \
  /home/hirshb/micromamba/envs/he-bpimd/lib/gcc/x86_64-conda-linux-gnu/13.4.0/include/c++/bits/stl_numeric.h \
  /home/hirshb/micromamba/envs/he-bpimd/lib/gcc/x86_64-conda-linux-gnu/13.4.0/include/c++/pstl/glue_numeric_defs.h \
  /storage/debug_He/external/pimd-b/include/observables/rdf.h \
+ /storage/debug_He/external/pimd-b/include/observables/relabel.h \
+ /storage/debug_He/external/pimd-b/include/observables/exchange.h \
+ /storage/debug_He/external/pimd-b/include/observables/timeshift.h \
  /storage/debug_He/external/pimd-b/include/propagators.h \
  /storage/debug_He/external/pimd-b/include/propagators/velocity_verlet.h \
  /storage/debug_He/external/pimd-b/include/propagators/propagator.h \
@@ -374,6 +378,10 @@ CMakeFiles/pimdb.dir/src/simulation.cpp.o: \
  /storage/debug_He/external/pimd-b/include/thermostats/nose_hoover.h \
  /storage/debug_He/external/pimd-b/include/thermostats/thermostat_coupling.h \
  /storage/debug_He/external/pimd-b/include/normal_modes.h \
+ /storage/debug_He/external/pimd-b/include/moves.h \
+ /storage/debug_He/external/pimd-b/include/moves/relabel_move.h \
+ /storage/debug_He/external/pimd-b/include/moves/exchange_move.h \
+ /storage/debug_He/external/pimd-b/include/moves/timeshift_move.h \
  /storage/debug_He/external/pimd-b/include/simulation.h \
  /storage/debug_He/external/pimd-b/libs/random_mars.h \
  /storage/debug_He/external/pimd-b/include/params.h \

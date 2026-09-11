@@ -297,6 +297,78 @@ src/common.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/common.cpp.s
 .PHONY : src/common.cpp.s
 
+src/moves/exchange_move.o: src/moves/exchange_move.cpp.o
+.PHONY : src/moves/exchange_move.o
+
+# target to build an object file
+src/moves/exchange_move.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/exchange_move.cpp.o
+.PHONY : src/moves/exchange_move.cpp.o
+
+src/moves/exchange_move.i: src/moves/exchange_move.cpp.i
+.PHONY : src/moves/exchange_move.i
+
+# target to preprocess a source file
+src/moves/exchange_move.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/exchange_move.cpp.i
+.PHONY : src/moves/exchange_move.cpp.i
+
+src/moves/exchange_move.s: src/moves/exchange_move.cpp.s
+.PHONY : src/moves/exchange_move.s
+
+# target to generate assembly for a file
+src/moves/exchange_move.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/exchange_move.cpp.s
+.PHONY : src/moves/exchange_move.cpp.s
+
+src/moves/relabel_move.o: src/moves/relabel_move.cpp.o
+.PHONY : src/moves/relabel_move.o
+
+# target to build an object file
+src/moves/relabel_move.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/relabel_move.cpp.o
+.PHONY : src/moves/relabel_move.cpp.o
+
+src/moves/relabel_move.i: src/moves/relabel_move.cpp.i
+.PHONY : src/moves/relabel_move.i
+
+# target to preprocess a source file
+src/moves/relabel_move.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/relabel_move.cpp.i
+.PHONY : src/moves/relabel_move.cpp.i
+
+src/moves/relabel_move.s: src/moves/relabel_move.cpp.s
+.PHONY : src/moves/relabel_move.s
+
+# target to generate assembly for a file
+src/moves/relabel_move.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/relabel_move.cpp.s
+.PHONY : src/moves/relabel_move.cpp.s
+
+src/moves/timeshift_move.o: src/moves/timeshift_move.cpp.o
+.PHONY : src/moves/timeshift_move.o
+
+# target to build an object file
+src/moves/timeshift_move.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/timeshift_move.cpp.o
+.PHONY : src/moves/timeshift_move.cpp.o
+
+src/moves/timeshift_move.i: src/moves/timeshift_move.cpp.i
+.PHONY : src/moves/timeshift_move.i
+
+# target to preprocess a source file
+src/moves/timeshift_move.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/timeshift_move.cpp.i
+.PHONY : src/moves/timeshift_move.cpp.i
+
+src/moves/timeshift_move.s: src/moves/timeshift_move.cpp.s
+.PHONY : src/moves/timeshift_move.s
+
+# target to generate assembly for a file
+src/moves/timeshift_move.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/moves/timeshift_move.cpp.s
+.PHONY : src/moves/timeshift_move.cpp.s
+
 src/normal_modes.o: src/normal_modes.cpp.o
 .PHONY : src/normal_modes.o
 
@@ -417,6 +489,30 @@ src/observables/energy.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/energy.cpp.s
 .PHONY : src/observables/energy.cpp.s
 
+src/observables/exchange.o: src/observables/exchange.cpp.o
+.PHONY : src/observables/exchange.o
+
+# target to build an object file
+src/observables/exchange.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/exchange.cpp.o
+.PHONY : src/observables/exchange.cpp.o
+
+src/observables/exchange.i: src/observables/exchange.cpp.i
+.PHONY : src/observables/exchange.i
+
+# target to preprocess a source file
+src/observables/exchange.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/exchange.cpp.i
+.PHONY : src/observables/exchange.cpp.i
+
+src/observables/exchange.s: src/observables/exchange.cpp.s
+.PHONY : src/observables/exchange.s
+
+# target to generate assembly for a file
+src/observables/exchange.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/exchange.cpp.s
+.PHONY : src/observables/exchange.cpp.s
+
 src/observables/gsf_action.o: src/observables/gsf_action.cpp.o
 .PHONY : src/observables/gsf_action.o
 
@@ -512,6 +608,54 @@ src/observables/rdf.s: src/observables/rdf.cpp.s
 src/observables/rdf.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/rdf.cpp.s
 .PHONY : src/observables/rdf.cpp.s
+
+src/observables/relabel.o: src/observables/relabel.cpp.o
+.PHONY : src/observables/relabel.o
+
+# target to build an object file
+src/observables/relabel.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/relabel.cpp.o
+.PHONY : src/observables/relabel.cpp.o
+
+src/observables/relabel.i: src/observables/relabel.cpp.i
+.PHONY : src/observables/relabel.i
+
+# target to preprocess a source file
+src/observables/relabel.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/relabel.cpp.i
+.PHONY : src/observables/relabel.cpp.i
+
+src/observables/relabel.s: src/observables/relabel.cpp.s
+.PHONY : src/observables/relabel.s
+
+# target to generate assembly for a file
+src/observables/relabel.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/relabel.cpp.s
+.PHONY : src/observables/relabel.cpp.s
+
+src/observables/timeshift.o: src/observables/timeshift.cpp.o
+.PHONY : src/observables/timeshift.o
+
+# target to build an object file
+src/observables/timeshift.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/timeshift.cpp.o
+.PHONY : src/observables/timeshift.cpp.o
+
+src/observables/timeshift.i: src/observables/timeshift.cpp.i
+.PHONY : src/observables/timeshift.i
+
+# target to preprocess a source file
+src/observables/timeshift.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/timeshift.cpp.i
+.PHONY : src/observables/timeshift.cpp.i
+
+src/observables/timeshift.s: src/observables/timeshift.cpp.s
+.PHONY : src/observables/timeshift.s
+
+# target to generate assembly for a file
+src/observables/timeshift.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/observables/timeshift.cpp.s
+.PHONY : src/observables/timeshift.cpp.s
 
 src/params.o: src/params.cpp.o
 .PHONY : src/params.o
@@ -825,6 +969,30 @@ src/states/force.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/states/force.cpp.s
 .PHONY : src/states/force.cpp.s
 
+src/states/label.o: src/states/label.cpp.o
+.PHONY : src/states/label.o
+
+# target to build an object file
+src/states/label.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/states/label.cpp.o
+.PHONY : src/states/label.cpp.o
+
+src/states/label.i: src/states/label.cpp.i
+.PHONY : src/states/label.i
+
+# target to preprocess a source file
+src/states/label.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/states/label.cpp.i
+.PHONY : src/states/label.cpp.i
+
+src/states/label.s: src/states/label.cpp.s
+.PHONY : src/states/label.s
+
+# target to generate assembly for a file
+src/states/label.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pimdb.dir/build.make CMakeFiles/pimdb.dir/src/states/label.cpp.s
+.PHONY : src/states/label.cpp.s
+
 src/states/position.o: src/states/position.cpp.o
 .PHONY : src/states/position.o
 
@@ -1047,6 +1215,15 @@ help:
 	@echo "... src/common.o"
 	@echo "... src/common.i"
 	@echo "... src/common.s"
+	@echo "... src/moves/exchange_move.o"
+	@echo "... src/moves/exchange_move.i"
+	@echo "... src/moves/exchange_move.s"
+	@echo "... src/moves/relabel_move.o"
+	@echo "... src/moves/relabel_move.i"
+	@echo "... src/moves/relabel_move.s"
+	@echo "... src/moves/timeshift_move.o"
+	@echo "... src/moves/timeshift_move.i"
+	@echo "... src/moves/timeshift_move.s"
 	@echo "... src/normal_modes.o"
 	@echo "... src/normal_modes.i"
 	@echo "... src/normal_modes.s"
@@ -1062,6 +1239,9 @@ help:
 	@echo "... src/observables/energy.o"
 	@echo "... src/observables/energy.i"
 	@echo "... src/observables/energy.s"
+	@echo "... src/observables/exchange.o"
+	@echo "... src/observables/exchange.i"
+	@echo "... src/observables/exchange.s"
 	@echo "... src/observables/gsf_action.o"
 	@echo "... src/observables/gsf_action.i"
 	@echo "... src/observables/gsf_action.s"
@@ -1074,6 +1254,12 @@ help:
 	@echo "... src/observables/rdf.o"
 	@echo "... src/observables/rdf.i"
 	@echo "... src/observables/rdf.s"
+	@echo "... src/observables/relabel.o"
+	@echo "... src/observables/relabel.i"
+	@echo "... src/observables/relabel.s"
+	@echo "... src/observables/timeshift.o"
+	@echo "... src/observables/timeshift.i"
+	@echo "... src/observables/timeshift.s"
 	@echo "... src/params.o"
 	@echo "... src/params.i"
 	@echo "... src/params.s"
@@ -1113,6 +1299,9 @@ help:
 	@echo "... src/states/force.o"
 	@echo "... src/states/force.i"
 	@echo "... src/states/force.s"
+	@echo "... src/states/label.o"
+	@echo "... src/states/label.i"
+	@echo "... src/states/label.s"
 	@echo "... src/states/position.o"
 	@echo "... src/states/position.i"
 	@echo "... src/states/position.s"

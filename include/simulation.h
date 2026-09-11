@@ -16,6 +16,9 @@ class State;
 class Observable;
 class Propagator;
 class Thermostat;
+class RelabelMove;
+class ExchangeMove;
+class TimeShiftMove;
 
 class Simulation
 {
@@ -95,6 +98,22 @@ public:
     std::unique_ptr<Thermostat> thermostat;
 
     std::unique_ptr<NormalModes> normal_modes;
+
+    // Optional Monte Carlo relabelling of particles (bosonic simulations)
+    bool relabel;
+    int relabel_freq;
+    std::unique_ptr<RelabelMove> relabel_move;
+
+    // Optional Monte Carlo exchange (segment regrowth) move (bosonic simulations)
+    bool exchange_move;
+    int exchange_freq;
+    std::unique_ptr<ExchangeMove> exchange_mc;
+
+    // Optional imaginary-time shift move (bosonic simulations)
+    bool timeshift;
+    int timeshift_freq;
+    std::unique_ptr<TimeShiftMove> timeshift_move;
+    void initializeMoves(const VariantMap& sim_params);
 
     void run();
 

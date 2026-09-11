@@ -37,6 +37,8 @@ std::unique_ptr<State> StateFactory::createQuantity(const std::string& state_typ
         return std::make_unique<VelocityState>(_sim, _freq, _out_unit);
     } else if (state_type == "force") {
         return std::make_unique<ForceState>(_sim, _freq, _out_unit);
+    } else if (state_type == "label") {
+        return std::make_unique<LabelState>(_sim, _freq, _out_unit);
     } else {
         throw std::invalid_argument("Unknown state type.");
     }

@@ -60,6 +60,12 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
         return std::make_unique<PermutationObservable>(_sim, _freq, _out_unit, true);
     } else if (observable_type == "rdf") {
         return std::make_unique<RDFObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "relabel") {
+        return std::make_unique<RelabelObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "exchange") {
+        return std::make_unique<ExchangeMoveObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "timeshift") {
+        return std::make_unique<TimeShiftObservable>(_sim, _freq, _out_unit);
     } else {
         throw std::invalid_argument("Unknown observable type.");
     }

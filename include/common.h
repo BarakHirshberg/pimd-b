@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <format>
 #include <variant>
@@ -184,6 +185,17 @@ public:
      */
     const T& operator[](size_t idx) const {
         return m_arr[idx];
+    }
+
+    /**
+     * Swaps the vectors (rows) i and j in place. Used to relabel particles.
+     *
+     * @param i First vector index.
+     * @param j Second vector index.
+     */
+    void swapRows(int i, int j) {
+        if (i == j) return;
+        std::swap_ranges(m_arr.begin() + index(i, 0), m_arr.begin() + index(i, 0) + dim, m_arr.begin() + index(j, 0));
     }
 
     /**
