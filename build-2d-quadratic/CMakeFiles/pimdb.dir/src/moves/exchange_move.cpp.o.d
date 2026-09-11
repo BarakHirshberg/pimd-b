@@ -335,4 +335,5 @@ CMakeFiles/pimdb.dir/src/moves/exchange_move.cpp.o: \
  /storage/debug_He/external/pimd-b/include/bosonic_exchange/bosonic_exchange_base.h \
  /storage/debug_He/external/pimd-b/include/bosonic_exchange/quadratic_bosonic_exchange.h \
  /home/hirshb/micromamba/envs/he-bpimd/include/mpi.h \
- /home/hirshb/micromamba/envs/he-bpimd/include/mpi_portable_platform.h
+ /home/hirshb/micromamba/envs/he-bpimd/include/mpi_portable_platform.h \
+ /storage/debug_He/external/pimd-b/include/winding.h

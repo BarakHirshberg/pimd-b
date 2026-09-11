@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "winding.h"
+
 ExchangeMove::ExchangeMove(Simulation& _sim, int _max_segment, int attempts, unsigned int seed) :
     sim(_sim),
     max_segment(std::min(_max_segment, _sim.nbeads - 2)),
@@ -16,9 +18,6 @@ ExchangeMove::ExchangeMove(Simulation& _sim, int _max_segment, int attempts, uns
     path_b(_sim.nbeads),
     gather_buffer(2 * NDIM * _sim.nbeads),
     proposal_buffer(4 + 2 * NDIM * std::max(1, std::min(_max_segment, _sim.nbeads - 2))) {
-    if (_sim.winding_springs) {
-        throw std::invalid_argument("The exchange move does not support winding_springs yet (minimum-image spring energies).");
-    }
     if (max_segment < 1) {
         throw std::invalid_argument("The exchange move requires at least 3 beads (nbeads >= 3).");
     }
@@ -66,10 +65,20 @@ void ExchangeMove::levyBridge(const std::array<double, NDIM>& start, const std::
     const double sigma2 = 1.0 / (sim.thermo_beta * sim.spring_constant);
     std::normal_distribution<double> normal(0.0, 1.0);
 
+    // Unwrapped target: minimum image of the end point and, with winding-sum springs, an image shift
+    // w L drawn from the periodic free propagator over the m+1 links (variance (m+1)/(beta_P k) per
+    // component), which makes the proposal density of the regrown segment the image-summed one.
     std::array<double, NDIM> target{};
     std::array<double, NDIM> diff{};
     separation(start, end, diff);
-    for (int axis = 0; axis < NDIM; ++axis) target[axis] = start[axis] + diff[axis];
+    for (int axis = 0; axis < NDIM; ++axis) {
+        double shift = 0.0;
+        if (sim.winding_springs) {
+            const WindingProbability wp(diff[axis], sim.max_wind, sim.beta_half_k / (m + 1), sim.size);
+            shift = sim.size * wp.sample(gen);
+        }
+        target[axis] = start[axis] + diff[axis] + shift;
+    }
 
     out.assign(m, {});
     std::array<double, NDIM> prev = start;
@@ -222,19 +231,37 @@ void ExchangeMove::attempt() {
             //                                / sum_tau exp(-beta_P (E_close,tau(new) - g_tau)),
             // with g_tau = k/(2(m+1)) |end_tau - anchor|^2 summed over both particles (log-sum-exp below).
             std::array<double, NDIM> d{};
-            auto sq = [&](const std::array<double, NDIM>& x1, const std::array<double, NDIM>& x2) {
+            // Energy of one closing link (last bead -> first bead): (k/2) d^2 with minimum-image springs,
+            // -(1/beta_P) ln mu(d) with winding-sum springs.
+            auto close_e = [&](const std::array<double, NDIM>& x1, const std::array<double, NDIM>& x2) {
                 separation(x1, x2, d);
+                if (sim.winding_springs) return -sim.linkLogWeight(d.data()) / sim.thermo_beta;
                 double s = 0.0;
                 for (int axis = 0; axis < NDIM; ++axis) s += d[axis] * d[axis];
-                return s;
+                return k_half * s;
             };
+            // Free propagator of the anchor -> end displacement over m+1 links, as an "energy":
+            // k/(2(m+1)) D^2, or its image-summed counterpart with winding-sum springs.
             const double k_bridge = k_half / (m + 1);
-            const double g_id = k_bridge * (sq(anchor_a, first_a) + sq(anchor_b, first_b));
-            const double g_sw = k_bridge * (sq(anchor_a, first_b) + sq(anchor_b, first_a));
-            const double old_id = k_half * (sq(path_a[P - 1], first_a) + sq(path_b[P - 1], first_b)) - g_id;
-            const double old_sw = k_half * (sq(path_a[P - 1], first_b) + sq(path_b[P - 1], first_a)) - g_sw;
-            const double new_id = k_half * (sq(new_a[m - 1], first_a) + sq(new_b[m - 1], first_b)) - g_id;
-            const double new_sw = k_half * (sq(new_a[m - 1], first_b) + sq(new_b[m - 1], first_a)) - g_sw;
+            auto g_e = [&](const std::array<double, NDIM>& x1, const std::array<double, NDIM>& x2) {
+                separation(x1, x2, d);
+                if (sim.winding_springs) {
+                    double lw = 0.0;
+                    for (int axis = 0; axis < NDIM; ++axis) {
+                        lw += WindingProbability(d[axis], sim.max_wind, sim.beta_half_k / (m + 1), sim.size).logWeight();
+                    }
+                    return -lw / sim.thermo_beta;
+                }
+                double s = 0.0;
+                for (int axis = 0; axis < NDIM; ++axis) s += d[axis] * d[axis];
+                return k_bridge * s;
+            };
+            const double g_id = g_e(anchor_a, first_a) + g_e(anchor_b, first_b);
+            const double g_sw = g_e(anchor_a, first_b) + g_e(anchor_b, first_a);
+            const double old_id = close_e(path_a[P - 1], first_a) + close_e(path_b[P - 1], first_b) - g_id;
+            const double old_sw = close_e(path_a[P - 1], first_b) + close_e(path_b[P - 1], first_a) - g_sw;
+            const double new_id = close_e(new_a[m - 1], first_a) + close_e(new_b[m - 1], first_b) - g_id;
+            const double new_sw = close_e(new_a[m - 1], first_b) + close_e(new_b[m - 1], first_a) - g_sw;
             auto log_sum_exp = [&](double x1, double x2) {
                 const double mn = std::min(x1, x2);
                 return -mn + std::log(std::exp(-(x1 - mn)) + std::exp(-(x2 - mn)));
