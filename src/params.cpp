@@ -188,8 +188,15 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // "normal_modes": a velocity Verlet algorithm that propagates the normal modes
     allowed_propagators = { "cartesian", "normal_modes" };
     std::string propagator_type = reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
-    if (bosonic && propagator_type == "normal_modes") {
-        throw std::invalid_argument("Normal modes propogation is currently not available for bosons!");
+    // For bosons, normal-mode propagation integrates the free ring polymer of the IDENTITY permutation
+    // exactly and applies the difference between the bosonic exterior forces and the identity exterior
+    // springs as an additional force on the first and last beads (scheme used by the LAMMPS
+    // implementation of Myung, Hirshberg, Parrinello, PRL 128, 045301 (2022)). It must be enabled
+    // explicitly because it has been validated only against Cartesian propagation.
+    bool bosonic_nm = reader.GetBoolean(Sections::SIMULATION, "bosonic_normal_modes", false);
+    if (bosonic && propagator_type == "normal_modes" && !bosonic_nm) {
+        throw std::invalid_argument("Normal-mode propagation for bosons is approximate (identity ring polymer + exchange "
+                                    "correction force); set bosonic_normal_modes = true to enable it.");
     }
     sim["propagator_type"] = propagator_type;
     
@@ -202,15 +209,20 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // "nose_hoover_np" A unique Nose-Hoover chain coupled to each particle
     // "nose_hoover_np_dim" A unique Nose-Hoover chain coupled to each cartezian coordinate of each particle
     // "none": No thermostat (NVE simulation)
-    allowed_thermostats = { "langevin", "nose_hoover", "nose_hoover_np", "nose_hoover_np_dim", "none" };
+    // "pile": path-integral Langevin equation (Ceriotti et al., JCP 133, 124104 (2010)): Langevin on the
+    //         normal modes with friction 2*omega_k for the non-centroid modes and gamma for the centroid
+    allowed_thermostats = { "langevin", "pile", "nose_hoover", "nose_hoover_np", "nose_hoover_np_dim", "none" };
     std::string thermostat_type = reader.GetString(Sections::SIMULATION, "thermostat", "error");
     if (thermostat_type == "error") {
         throw std::invalid_argument("Thermostat must be specified!");
     }
+    if (thermostat_type == "pile" && !nmthermostat) {
+        throw std::invalid_argument("The pile thermostat acts on the normal modes: set nmthermostat = true!");
+    }
     if (nmthermostat && thermostat_type == "none") {
         throw std::invalid_argument("nmthermostat cannot be used in nve ensemble!");
     }
-    if ((reader.GetInteger(Sections::SIMULATION, "nchains", -1) != -1) && ((thermostat_type == "none") || (thermostat_type == "langevin"))) {
+    if ((reader.GetInteger(Sections::SIMULATION, "nchains", -1) != -1) && ((thermostat_type == "none") || (thermostat_type == "langevin") || (thermostat_type == "pile"))) {
         throw std::invalid_argument("nchains can only be used with Nose-Hoover thermostats!");
     }
     sim["thermostat_type"] = thermostat_type;

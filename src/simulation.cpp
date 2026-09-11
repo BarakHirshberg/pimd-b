@@ -706,6 +706,8 @@ void Simulation::initializeThermostat(const VariantMap& sim_params) {
 
     if (thermostat_type == "langevin") {
         thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
+    } else if (thermostat_type == "pile") {
+        thermostat = std::make_unique<PILEThermostat>(*this, nmthermostat);
     } else if (thermostat_type == "nose_hoover") {
         thermostat = std::make_unique<NoseHooverThermostat>(*this, nmthermostat, nchains);
     } else if (thermostat_type == "nose_hoover_np") {

@@ -25,3 +25,13 @@ void LangevinThermostat::momentaUpdate() {
         }
     }
 }
+
+/**
+ * @brief PILE-L: friction 2*omega_k for the normal mode of this rank (k = this_bead), gamma for the centroid.
+ */
+PILEThermostat::PILEThermostat(Simulation& _sim, bool normal_modes) : LangevinThermostat(_sim, normal_modes) {
+    const double omega_k = 2.0 * sim.omega_p * std::sin(sim.this_bead * std::numbers::pi / sim.nbeads);
+    const double gamma_k = (sim.this_bead == 0) ? sim.gamma : 2.0 * omega_k;
+    friction_coefficient = std::exp(-0.5 * gamma_k * sim.dt);
+    noise_coefficient = std::sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass / sim.thermo_beta);
+}
