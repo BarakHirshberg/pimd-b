@@ -844,15 +844,16 @@ void Simulation::initializeMoves(const VariantMap& sim_params) {
     }
 
     if (exchange_move) {
-        int attempts, segment;
+        int attempts, segment, kmax;
         unsigned int seed;
         getVariant(sim_params.at("exchange_attempts"), attempts);
         getVariant(sim_params.at("exchange_segment"), segment);
+        getVariant(sim_params.at("exchange_kmax"), kmax);
         getVariant(sim_params.at("exchange_seed"), seed);
         if (segment <= 0) {
             segment = nbeads / 2;
         }
-        exchange_mc = std::make_unique<ExchangeMove>(*this, segment, attempts, seed);
+        exchange_mc = std::make_unique<ExchangeMove>(*this, segment, attempts, kmax, seed);
     }
 }
 

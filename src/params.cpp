@@ -82,6 +82,10 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
         throw std::invalid_argument(std::format("The number of exchange move attempts ({}) must be positive!", a));
     // Maximum number of regrown beads per particle (0 = half of the beads)
     sim["exchange_segment"] = reader.GetInteger(Sections::SIMULATION, "exchange_segment", 0);
+    // Largest block of consecutive particles closed into a cycle by one move (2 = pair swaps only)
+    sim["exchange_kmax"] = reader.GetInteger(Sections::SIMULATION, "exchange_kmax", 2);
+    if (int kmax = std::get<int>(sim["exchange_kmax"]); kmax < 2)
+        throw std::invalid_argument(std::format("exchange_kmax ({}) must be at least 2!", kmax));
     sim["exchange_seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "exchange_seed",
         reader.Get(Sections::SIMULATION, "seed", "1234"))));
     if (exchange_move && !bosonic)

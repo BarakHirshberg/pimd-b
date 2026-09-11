@@ -9,17 +9,17 @@
 
 #include "winding.h"
 
-ExchangeMove::ExchangeMove(Simulation& _sim, int _max_segment, int attempts, unsigned int seed) :
+ExchangeMove::ExchangeMove(Simulation& _sim, int _max_segment, int attempts, int _kmax, unsigned int seed) :
     sim(_sim),
     max_segment(std::min(_max_segment, _sim.nbeads - 2)),
     n_attempts(attempts),
+    kmax(std::max(2, std::min(_kmax, _sim.natoms))),
     gen(seed),
     n_trials(0),
     n_accepted(0),
-    path_a(_sim.nbeads),
-    path_b(_sim.nbeads),
-    gather_buffer(2 * NDIM * _sim.nbeads),
-    proposal_buffer(4 + 2 * NDIM * std::max(1, std::min(_max_segment, _sim.nbeads - 2))) {
+    paths(kmax, std::vector<Vec>(_sim.nbeads)),
+    gather_buffer(kmax * NDIM * _sim.nbeads),
+    proposal_buffer(kmax * NDIM * std::max(1, std::min(_max_segment, _sim.nbeads - 2))) {
     if (max_segment < 1) {
         throw std::invalid_argument("The exchange move requires at least 3 beads (nbeads >= 3).");
     }
@@ -28,8 +28,7 @@ ExchangeMove::ExchangeMove(Simulation& _sim, int _max_segment, int attempts, uns
 /**
  * @brief Minimum-image separation x2 - x1 (consistent with the spring energies of the code).
  */
-void ExchangeMove::separation(const std::array<double, NDIM>& x1, const std::array<double, NDIM>& x2,
-                              std::array<double, NDIM>& diff) const {
+void ExchangeMove::separation(const Vec& x1, const Vec& x2, Vec& diff) const {
     for (int axis = 0; axis < NDIM; ++axis) {
         double dx = x2[axis] - x1[axis];
 #if MINIM
@@ -40,50 +39,66 @@ void ExchangeMove::separation(const std::array<double, NDIM>& x1, const std::arr
 }
 
 /**
- * @brief Collects the coordinates of particles a and b on all beads (identical result on every rank).
+ * @brief Index (within the block) of the particle onto which particle i closes under closure tau:
+ * 0 = identity, 1 = forward cycle (i -> i+1), 2 = backward cycle (i -> i-1).
  */
-void ExchangeMove::gatherPaths(int a, int b) {
-    std::array<double, 2 * NDIM> local{};
-    for (int axis = 0; axis < NDIM; ++axis) {
-        local[axis] = sim.coord(a, axis);
-        local[NDIM + axis] = sim.coord(b, axis);
-    }
-    MPI_Allgather(local.data(), 2 * NDIM, MPI_DOUBLE, gather_buffer.data(), 2 * NDIM, MPI_DOUBLE, MPI_COMM_WORLD);
-    for (int j = 0; j < sim.nbeads; ++j) {
+int ExchangeMove::closureTarget(int i, int k, int tau) {
+    if (tau == 0) return i;
+    if (tau == 1) return (i + 1) % k;
+    return (i - 1 + k) % k;
+}
+
+/**
+ * @brief Collects the coordinates of the block particles on all beads (identical result on every rank).
+ */
+void ExchangeMove::gatherPaths(const std::vector<int>& block) {
+    const int k = static_cast<int>(block.size());
+    std::vector<double> local(k * NDIM);
+    for (int i = 0; i < k; ++i) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            path_a[j][axis] = gather_buffer[2 * NDIM * j + axis];
-            path_b[j][axis] = gather_buffer[2 * NDIM * j + NDIM + axis];
+            local[i * NDIM + axis] = sim.coord(block[i], axis);
+        }
+    }
+    MPI_Allgather(local.data(), k * NDIM, MPI_DOUBLE, gather_buffer.data(), k * NDIM, MPI_DOUBLE, MPI_COMM_WORLD);
+    for (int j = 0; j < sim.nbeads; ++j) {
+        for (int i = 0; i < k; ++i) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                paths[i][j][axis] = gather_buffer[k * NDIM * j + i * NDIM + axis];
+            }
         }
     }
 }
 
 /**
- * @brief Free-particle (Levy) bridge of m beads between fixed points start and end (m+1 links).
- * The single-link variance is 1/(beta_P k) with k the ring-polymer spring constant. The bridge is
- * built in unwrapped coordinates from the minimum-image displacement between start and end.
+ * @brief Unwrapped target of a bridge from anchor towards end: anchor + MIC(end - anchor), plus (with
+ * winding-sum springs, when draw_image is set) an image shift w L per component drawn from the periodic
+ * free propagator over the m+1 links, which makes the proposal density of the regrown segment the
+ * image-summed one.
  */
-void ExchangeMove::levyBridge(const std::array<double, NDIM>& start, const std::array<double, NDIM>& end, int m,
-                              std::vector<std::array<double, NDIM>>& out) {
-    const double sigma2 = 1.0 / (sim.thermo_beta * sim.spring_constant);
-    std::normal_distribution<double> normal(0.0, 1.0);
-
-    // Unwrapped target: minimum image of the end point and, with winding-sum springs, an image shift
-    // w L drawn from the periodic free propagator over the m+1 links (variance (m+1)/(beta_P k) per
-    // component), which makes the proposal density of the regrown segment the image-summed one.
-    std::array<double, NDIM> target{};
-    std::array<double, NDIM> diff{};
-    separation(start, end, diff);
+ExchangeMove::Vec ExchangeMove::bridgeTarget(const Vec& anchor, const Vec& end, int m, bool draw_image) {
+    Vec diff{}, target{};
+    separation(anchor, end, diff);
     for (int axis = 0; axis < NDIM; ++axis) {
         double shift = 0.0;
-        if (sim.winding_springs) {
+        if (sim.winding_springs && draw_image) {
             const WindingProbability wp(diff[axis], sim.max_wind, sim.beta_half_k / (m + 1), sim.size);
             shift = sim.size * wp.sample(gen);
         }
-        target[axis] = start[axis] + diff[axis] + shift;
+        target[axis] = anchor[axis] + diff[axis] + shift;
     }
+    return target;
+}
+
+/**
+ * @brief Free-particle (Levy) bridge of m beads between the fixed points start and target (m+1 links).
+ * The single-link variance is 1/(beta_P k) with k the ring-polymer spring constant.
+ */
+void ExchangeMove::levyBridge(const Vec& start, const Vec& target, int m, std::vector<Vec>& out) {
+    const double sigma2 = 1.0 / (sim.thermo_beta * sim.spring_constant);
+    std::normal_distribution<double> normal(0.0, 1.0);
 
     out.assign(m, {});
-    std::array<double, NDIM> prev = start;
+    Vec prev = start;
     for (int j = 1; j <= m; ++j) {
         const int remaining = m + 2 - j;  // links left including the one being drawn
         const double var = sigma2 * (remaining - 1) / static_cast<double>(remaining);
@@ -96,106 +111,148 @@ void ExchangeMove::levyBridge(const std::array<double, NDIM>& start, const std::
 }
 
 /**
- * @brief Change of the physical potential on this rank's slice when particles a and b move to new_a, new_b.
+ * @brief Energy of a closing link given by the RAW (unwrapped) difference target - last: (k/2) d^2 with
+ * minimum-image springs, -(1/beta_P) ln mu(d) with winding-sum springs (mu is periodic, so the image of
+ * the target is summed over consistently with the forward proposal).
  */
-double ExchangeMove::slicePotentialChange(int a, int b, const std::array<double, NDIM>& new_a,
-                                          const std::array<double, NDIM>& new_b) const {
-    // Pair interactions with all other particles (and between a and b), plus the external potential
-    auto pair_energy = [&](const std::array<double, NDIM>& xa, const std::array<double, NDIM>& xb) {
+double ExchangeMove::closingEnergy(const Vec& last, const Vec& target) const {
+    double raw[NDIM];
+    for (int axis = 0; axis < NDIM; ++axis) raw[axis] = target[axis] - last[axis];
+    if (sim.winding_springs) return -sim.linkLogWeight(raw) / sim.thermo_beta;
+    double s = 0.0;
+    for (int axis = 0; axis < NDIM; ++axis) s += raw[axis] * raw[axis];
+    return 0.5 * sim.spring_constant * s;
+}
+
+/**
+ * @brief "Energy" of the free propagator of the anchor -> end minimum-image displacement over m+1 links:
+ * k D^2 / (2 (m+1)), or its image-summed counterpart with winding-sum springs.
+ */
+double ExchangeMove::propagatorEnergy(const Vec& anchor, const Vec& end, int m) const {
+    Vec d{};
+    separation(anchor, end, d);
+    if (sim.winding_springs) {
+        double lw = 0.0;
+        for (int axis = 0; axis < NDIM; ++axis) {
+            lw += WindingProbability(d[axis], sim.max_wind, sim.beta_half_k / (m + 1), sim.size).logWeight();
+        }
+        return -lw / sim.thermo_beta;
+    }
+    double s = 0.0;
+    for (int axis = 0; axis < NDIM; ++axis) s += d[axis] * d[axis];
+    return 0.5 * sim.spring_constant * s / (m + 1);
+}
+
+/**
+ * @brief Change of the physical potential on this rank's slice when the block particles move to new_pos.
+ */
+double ExchangeMove::slicePotentialChange(const std::vector<int>& block, const std::vector<Vec>& new_pos) const {
+    const int k = static_cast<int>(block.size());
+    std::vector<int> in_block(sim.natoms, -1);
+    for (int i = 0; i < k; ++i) in_block[block[i]] = i;
+
+    auto energy = [&](const std::vector<Vec>& pos) {
         double e = 0.0;
         if (sim.int_pot_cutoff != 0.0) {
-            for (int p = 0; p < sim.natoms; ++p) {
-                if (p == a || p == b) continue;
-                for (int which = 0; which < 2; ++which) {
-                    const auto& x = which == 0 ? xa : xb;
-                    dVec d;
-                    for (int axis = 0; axis < NDIM; ++axis) {
-                        double dx = x[axis] - sim.coord(p, axis);
-                        if (sim.pbc && MINIM) applyMinimumImage(dx, sim.size);
-                        d(0, axis) = dx;
-                    }
-                    const double r = d.norm();
-                    if (r < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) e += sim.int_potential->V(d);
+            auto pair = [&](const Vec& x, const Vec& y) {
+                dVec d;
+                for (int axis = 0; axis < NDIM; ++axis) {
+                    double dx = x[axis] - y[axis];
+                    if (sim.pbc && MINIM) applyMinimumImage(dx, sim.size);
+                    d(0, axis) = dx;
+                }
+                const double r = d.norm();
+                return (r < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) ? sim.int_potential->V(d) : 0.0;
+            };
+            // Block particles with the rest of the system
+            for (int i = 0; i < k; ++i) {
+                for (int p = 0; p < sim.natoms; ++p) {
+                    if (in_block[p] >= 0) continue;
+                    Vec y{};
+                    for (int axis = 0; axis < NDIM; ++axis) y[axis] = sim.coord(p, axis);
+                    e += pair(pos[i], y);
                 }
             }
-            dVec dab;
-            for (int axis = 0; axis < NDIM; ++axis) {
-                double dx = xa[axis] - xb[axis];
-                if (sim.pbc && MINIM) applyMinimumImage(dx, sim.size);
-                dab(0, axis) = dx;
+            // Within the block
+            for (int i = 0; i < k; ++i) {
+                for (int j = i + 1; j < k; ++j) {
+                    e += pair(pos[i], pos[j]);
+                }
             }
-            const double r = dab.norm();
-            if (r < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) e += sim.int_potential->V(dab);
         }
         if (sim.external_potential_name != "free") {
-            dVec two(2);
-            for (int axis = 0; axis < NDIM; ++axis) {
-                two(0, axis) = xa[axis];
-                two(1, axis) = xb[axis];
+            dVec xs(k);
+            for (int i = 0; i < k; ++i) {
+                for (int axis = 0; axis < NDIM; ++axis) xs(i, axis) = pos[i][axis];
             }
-            e += sim.ext_potential->V(two);
+            e += sim.ext_potential->V(xs);
         }
         return e;
     };
 
-    std::array<double, NDIM> old_a{}, old_b{};
-    for (int axis = 0; axis < NDIM; ++axis) {
-        old_a[axis] = sim.coord(a, axis);
-        old_b[axis] = sim.coord(b, axis);
+    std::vector<Vec> old_pos(k);
+    for (int i = 0; i < k; ++i) {
+        for (int axis = 0; axis < NDIM; ++axis) old_pos[i][axis] = sim.coord(block[i], axis);
     }
-    return pair_energy(new_a, new_b) - pair_energy(old_a, old_b);
+    return energy(new_pos) - energy(old_pos);
 }
 
 void ExchangeMove::attempt() {
     const int P = sim.nbeads;
     const int N = sim.natoms;
-    const double k_half = 0.5 * sim.spring_constant;
 
     for (int t = 0; t < n_attempts; ++t) {
-        // ---- proposal drawn on rank 0 ----
-        int a = 0, b = 1, m = 1, swap = 0;
+        // ---- proposal drawn on rank 0: block start a, block size k, segment length m, closure tau ----
+        int header[4] = {0, 2, 1, 0};
         if (sim.this_bead == 0) {
-            std::uniform_int_distribution<int> pick_pair(0, N - 2);
+            std::uniform_int_distribution<int> pick_k(2, kmax);
+            const int k = pick_k(gen);
+            std::uniform_int_distribution<int> pick_a(0, N - k);
             std::uniform_int_distribution<int> pick_m(1, max_segment);
-            std::uniform_int_distribution<int> pick_target(0, 1);
-            a = pick_pair(gen);
-            b = a + 1;  // consecutive labels: where the quadratic recursion assigns exchange weight
-            m = pick_m(gen);
-            swap = pick_target(gen);
+            std::uniform_int_distribution<int> pick_tau(0, k == 2 ? 1 : 2);
+            header[0] = pick_a(gen);
+            header[1] = k;
+            header[2] = pick_m(gen);
+            header[3] = pick_tau(gen);
         }
-        int header[4] = {a, b, m, swap};
         MPI_Bcast(header, 4, MPI_INT, 0, MPI_COMM_WORLD);
-        a = header[0]; b = header[1]; m = header[2]; swap = header[3];
+        const int a = header[0], k = header[1], m = header[2], tau = header[3];
+        const int n_closures = (k == 2) ? 2 : 3;
 
-        gatherPaths(a, b);
+        std::vector<int> block(k);
+        for (int i = 0; i < k; ++i) block[i] = a + i;  // consecutive labels: where the recursion has weight
 
-        // Anchors (bead P-m, index P-m-1) and first beads (index 0)
-        const std::array<double, NDIM>& anchor_a = path_a[P - m - 1];
-        const std::array<double, NDIM>& anchor_b = path_b[P - m - 1];
-        const std::array<double, NDIM>& first_a = path_a[0];
-        const std::array<double, NDIM>& first_b = path_b[0];
-        const std::array<double, NDIM>& end_a = swap ? first_b : first_a;
-        const std::array<double, NDIM>& end_b = swap ? first_a : first_b;
+        gatherPaths(block);
 
-        std::vector<std::array<double, NDIM>> new_a, new_b;
+        // Anchors (bead P-m-1) and first beads (bead 0) of the block
+        std::vector<Vec> anchor(k), first(k), old_last(k);
+        for (int i = 0; i < k; ++i) {
+            anchor[i] = paths[i][P - m - 1];
+            first[i] = paths[i][0];
+            old_last[i] = paths[i][P - 1];
+        }
+
+        // Bridges on rank 0 (targets for the chosen closure; image drawn with winding-sum springs)
+        std::vector<std::vector<Vec>> new_seg(k);
         if (sim.this_bead == 0) {
-            levyBridge(anchor_a, end_a, m, new_a);
-            levyBridge(anchor_b, end_b, m, new_b);
-            for (int j = 0; j < m; ++j) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    proposal_buffer[2 * NDIM * j + axis] = new_a[j][axis];
-                    proposal_buffer[2 * NDIM * j + NDIM + axis] = new_b[j][axis];
+            for (int i = 0; i < k; ++i) {
+                const Vec target = bridgeTarget(anchor[i], first[closureTarget(i, k, tau)], m, true);
+                levyBridge(anchor[i], target, m, new_seg[i]);
+                for (int j = 0; j < m; ++j) {
+                    for (int axis = 0; axis < NDIM; ++axis) {
+                        proposal_buffer[(j * k + i) * NDIM + axis] = new_seg[i][j][axis];
+                    }
                 }
             }
         }
-        MPI_Bcast(proposal_buffer.data(), 2 * NDIM * m, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(proposal_buffer.data(), k * NDIM * m, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         if (sim.this_bead != 0) {
-            new_a.assign(m, {});
-            new_b.assign(m, {});
-            for (int j = 0; j < m; ++j) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    new_a[j][axis] = proposal_buffer[2 * NDIM * j + axis];
-                    new_b[j][axis] = proposal_buffer[2 * NDIM * j + NDIM + axis];
+            for (int i = 0; i < k; ++i) {
+                new_seg[i].assign(m, {});
+                for (int j = 0; j < m; ++j) {
+                    for (int axis = 0; axis < NDIM; ++axis) {
+                        new_seg[i][j][axis] = proposal_buffer[(j * k + i) * NDIM + axis];
+                    }
                 }
             }
         }
@@ -203,42 +260,10 @@ void ExchangeMove::attempt() {
         // ---- physical potential change on the regrown slices (ranks P-m .. P-1) ----
         double local_du = 0.0;
         const int seg_index = sim.this_bead - (P - m);  // position of this rank's bead within the segment
+        std::vector<Vec> new_here(k);
         if (seg_index >= 0 && seg_index < m) {
-            local_du = slicePotentialChange(a, b, new_a[seg_index], new_b[seg_index]);
-            if (std::getenv("PIMDB_EXCHANGE_DEBUG") != nullptr) {
-                // Consistency check: full re-evaluation of this slice's potential before/after the change
-                auto slice_potential = [&]() {
-                    double u = 0.0;
-                    if (sim.external_potential_name != "free") u += sim.ext_potential->V(sim.coord);
-                    if (sim.int_pot_cutoff != 0.0) {
-                        for (int p1 = 0; p1 < N; ++p1) {
-                            for (int p2 = p1 + 1; p2 < N; ++p2) {
-                                dVec diff = sim.getSeparation(p1, p2, MINIM);
-                                const double r = diff.norm();
-                                if (r < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) u += sim.int_potential->V(diff);
-                            }
-                        }
-                    }
-                    return u;
-                };
-                const double u_old = slice_potential();
-                std::array<double, NDIM> sa{}, sb{};
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    sa[axis] = sim.coord(a, axis);
-                    sb[axis] = sim.coord(b, axis);
-                    sim.coord(a, axis) = new_a[seg_index][axis];
-                    sim.coord(b, axis) = new_b[seg_index][axis];
-                }
-                const double u_new = slice_potential();
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    sim.coord(a, axis) = sa[axis];
-                    sim.coord(b, axis) = sb[axis];
-                }
-                const double full_du = u_new - u_old;
-                if (std::abs(full_du - local_du) > 1e-8 * (1.0 + std::abs(full_du))) {
-                    std::fprintf(stderr, "EXCHANGE_DEBUG rank %d: du(slice fn)=%.10g du(full)=%.10g\n", sim.this_bead, local_du, full_du);
-                }
-            }
+            for (int i = 0; i < k; ++i) new_here[i] = new_seg[i][seg_index];
+            local_du = slicePotentialChange(block, new_here);
         }
         double du = 0.0;
         MPI_Reduce(&local_du, &du, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -248,95 +273,46 @@ void ExchangeMove::attempt() {
         if (sim.this_bead == 0) {
             const double v_old = sim.bosonic_exchange->effectivePotential();
 
-            std::array<double, NDIM> saved_a{}, saved_b{};
-            for (int axis = 0; axis < NDIM; ++axis) {
-                saved_a[axis] = sim.prev_coord(a, axis);
-                saved_b[axis] = sim.prev_coord(b, axis);
-                sim.prev_coord(a, axis) = new_a[m - 1][axis];
-                sim.prev_coord(b, axis) = new_b[m - 1][axis];
+            std::vector<Vec> saved(k);
+            for (int i = 0; i < k; ++i) {
+                for (int axis = 0; axis < NDIM; ++axis) {
+                    saved[i][axis] = sim.prev_coord(block[i], axis);
+                    sim.prev_coord(block[i], axis) = new_seg[i][m - 1][axis];
+                }
             }
             sim.bosonic_exchange->prepare();
             const double v_new = sim.bosonic_exchange->effectivePotential();
 
-            // Mixture proposal: the target (identity or exchange) is drawn with probability 1/2, so the
-            // proposal density of a segment is q(seg) = (1/2) sum_tau B_tau(seg) with
-            // B_tau(seg) = exp(-beta_P [S_int(seg) + E_close,tau(seg)]) / G_tau, G_tau the free propagator of
-            // the anchor-to-target displacement over m+1 links. In the Metropolis ratio the interior spring
-            // energies S_int cancel between pi and q, leaving
-            //   A = exp(-beta_P (dU + dV_B)) * sum_tau exp(-beta_P (E_close,tau(old) - g_tau))
-            //                                / sum_tau exp(-beta_P (E_close,tau(new) - g_tau)),
-            // with g_tau = k/(2(m+1)) |end_tau - anchor|^2 summed over both particles (log-sum-exp below).
-            std::array<double, NDIM> d{};
-            // Energy of one closing link (last bead -> first bead): (k/2) d^2 with minimum-image springs,
-            // -(1/beta_P) ln mu(d) with winding-sum springs.
-            auto close_e = [&](const std::array<double, NDIM>& x1, const std::array<double, NDIM>& x2) {
-                separation(x1, x2, d);
-                if (sim.winding_springs) return -sim.linkLogWeight(d.data()) / sim.thermo_beta;
-                double s = 0.0;
-                for (int axis = 0; axis < NDIM; ++axis) s += d[axis] * d[axis];
-                return k_half * s;
-            };
-            // Free propagator of the anchor -> end displacement over m+1 links, as an "energy":
-            // k/(2(m+1)) D^2, or its image-summed counterpart with winding-sum springs.
-            const double k_bridge = k_half / (m + 1);
-            auto g_e = [&](const std::array<double, NDIM>& x1, const std::array<double, NDIM>& x2) {
-                separation(x1, x2, d);
-                if (sim.winding_springs) {
-                    double lw = 0.0;
-                    for (int axis = 0; axis < NDIM; ++axis) {
-                        lw += WindingProbability(d[axis], sim.max_wind, sim.beta_half_k / (m + 1), sim.size).logWeight();
-                    }
-                    return -lw / sim.thermo_beta;
+            // Mixture proposal over the closures: S(seg) = sum_tau' exp(-beta_P [E_close,tau'(seg) - g_tau']),
+            // where E_close uses the RAW closing links to the (image-free) bridge targets of each closure and
+            // g_tau' the free-propagator energies of the anchor-to-end displacements. The interior spring
+            // energies of the segment cancel between target and proposal.
+            std::vector<double> e_old(n_closures), e_new(n_closures);
+            for (int c = 0; c < n_closures; ++c) {
+                double g = 0.0, eo = 0.0, en = 0.0;
+                for (int i = 0; i < k; ++i) {
+                    const Vec& end = first[closureTarget(i, k, c)];
+                    const Vec target = bridgeTarget(anchor[i], end, m, false);
+                    g += propagatorEnergy(anchor[i], end, m);
+                    eo += closingEnergy(old_last[i], target);
+                    en += closingEnergy(new_seg[i][m - 1], target);
                 }
+                e_old[c] = sim.thermo_beta * (eo - g);
+                e_new[c] = sim.thermo_beta * (en - g);
+            }
+            auto log_sum_exp = [](const std::vector<double>& x) {
+                const double mn = *std::min_element(x.begin(), x.end());
                 double s = 0.0;
-                for (int axis = 0; axis < NDIM; ++axis) s += d[axis] * d[axis];
-                return k_bridge * s;
+                for (double v : x) s += std::exp(-(v - mn));
+                return -mn + std::log(s);
             };
-            // The reverse bridge (regrowing the OLD segment) aims at the same unwrapped target as the
-            // forward one: anchor + minimum-image(end - anchor). Its closing link is therefore the RAW
-            // difference target - old_last, not the minimum image of end - old_last: an old segment whose
-            // links wrap the box cannot be regenerated by a bridge to the nearest image, and must get the
-            // (exponentially small) density of a stretched closing link. With winding-sum springs the
-            // image of the target is summed over, so the periodic weight of the raw difference is used.
-            auto target_of = [&](const std::array<double, NDIM>& anchor, const std::array<double, NDIM>& end) {
-                std::array<double, NDIM> t{};
-                separation(anchor, end, d);
-                for (int axis = 0; axis < NDIM; ++axis) t[axis] = anchor[axis] + d[axis];
-                return t;
-            };
-            auto close_raw = [&](const std::array<double, NDIM>& last, const std::array<double, NDIM>& target) {
-                std::array<double, NDIM> raw{};
-                for (int axis = 0; axis < NDIM; ++axis) raw[axis] = target[axis] - last[axis];
-                if (sim.winding_springs) return -sim.linkLogWeight(raw.data()) / sim.thermo_beta;
-                double s = 0.0;
-                for (int axis = 0; axis < NDIM; ++axis) s += raw[axis] * raw[axis];
-                return k_half * s;
-            };
-            const auto t_a_id = target_of(anchor_a, first_a), t_b_id = target_of(anchor_b, first_b);
-            const auto t_a_sw = target_of(anchor_a, first_b), t_b_sw = target_of(anchor_b, first_a);
-            const double g_id = g_e(anchor_a, first_a) + g_e(anchor_b, first_b);
-            const double g_sw = g_e(anchor_a, first_b) + g_e(anchor_b, first_a);
-            const double old_id = close_raw(path_a[P - 1], t_a_id) + close_raw(path_b[P - 1], t_b_id) - g_id;
-            const double old_sw = close_raw(path_a[P - 1], t_a_sw) + close_raw(path_b[P - 1], t_b_sw) - g_sw;
-            const double new_id = close_raw(new_a[m - 1], t_a_id) + close_raw(new_b[m - 1], t_b_id) - g_id;
-            const double new_sw = close_raw(new_a[m - 1], t_a_sw) + close_raw(new_b[m - 1], t_b_sw) - g_sw;
-            (void)close_e;
-            auto log_sum_exp = [&](double x1, double x2) {
-                const double mn = std::min(x1, x2);
-                return -mn + std::log(std::exp(-(x1 - mn)) + std::exp(-(x2 - mn)));
-            };
-            // ln sum_tau exp(-beta_P e_tau) for old and new segments
-            const double ls_old = log_sum_exp(sim.thermo_beta * old_id, sim.thermo_beta * old_sw);
-            const double ls_new = log_sum_exp(sim.thermo_beta * new_id, sim.thermo_beta * new_sw);
-
-            const double log_accept = -sim.thermo_beta * (du + (v_new - v_old)) + (ls_old - ls_new);
+            const double log_accept = -sim.thermo_beta * (du + (v_new - v_old)) + (log_sum_exp(e_old) - log_sum_exp(e_new));
             std::uniform_real_distribution<double> uniform(0.0, 1.0);
             accept = (log_accept >= 0.0 || uniform(gen) < std::exp(log_accept)) ? 1 : 0;
 
             if (!accept) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    sim.prev_coord(a, axis) = saved_a[axis];
-                    sim.prev_coord(b, axis) = saved_b[axis];
+                for (int i = 0; i < k; ++i) {
+                    for (int axis = 0; axis < NDIM; ++axis) sim.prev_coord(block[i], axis) = saved[i][axis];
                 }
                 sim.bosonic_exchange->prepare();
             }
@@ -347,9 +323,8 @@ void ExchangeMove::attempt() {
 
         if (accept) {
             if (seg_index >= 0 && seg_index < m) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    sim.coord(a, axis) = new_a[seg_index][axis];
-                    sim.coord(b, axis) = new_b[seg_index][axis];
+                for (int i = 0; i < k; ++i) {
+                    for (int axis = 0; axis < NDIM; ++axis) sim.coord(block[i], axis) = new_here[i][axis];
                 }
             }
             sim.updateNeighboringCoordinates();
