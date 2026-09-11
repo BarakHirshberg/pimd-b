@@ -4,9 +4,12 @@
 
 #include "bosonic_exchange/quadratic_bosonic_exchange.h"
 #include "simulation.h"
+#include "winding.h"
 
 BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),
     E_kn(nbosons * (nbosons + 1) / 2),
+    A_kn(nbosons * (nbosons + 1) / 2),
+    a_temp_nbosons_array(nbosons),
     V(nbosons + 1),
     V_backwards(nbosons + 1),
     connection_probabilities(static_cast<int>(nbosons* nbosons)),
@@ -37,6 +40,47 @@ void BosonicExchange::evaluateCycleEnergies() {
 
     assignFirstLast(x_first_bead, x_last_bead);
 
+    if (sim.winding_springs) {
+        // Rigorous periodic weights: the "energy" of a link is -(1/beta_P) ln mu(d) (winding sum over
+        // images), and its spring-energy expectation (k/2)<|d + wL|^2> is carried alongside in A_kn for
+        // the primitive kinetic estimator. JCP 163, 024101 (2025).
+        auto link_e = [&](const dVec& xa, int a, const dVec& xb, int b) {
+            double d[NDIM];
+            getBeadsSeparation(xa, a, xb, b, d);
+            return -sim.linkLogWeight(d) / beta;
+        };
+        auto link_a = [&](const dVec& xa, int a, const dVec& xb, int b) {
+            double d[NDIM];
+            getBeadsSeparation(xa, a, xb, b, d);
+            return sim.linkEnergyExpectation(d);
+        };
+
+        for (int i = 0; i < nbosons; i++) {
+            temp_nbosons_array[i] = link_e(x_first_bead, i, x_last_bead, i);
+            a_temp_nbosons_array[i] = link_a(x_first_bead, i, x_last_bead, i);
+        }
+
+        for (int v = 0; v < nbosons; v++) {
+            setEnk(v + 1, 1, temp_nbosons_array[v]);
+            setAnk(v + 1, 1, a_temp_nbosons_array[v]);
+
+            for (int u = v - 1; u >= 0; u--) {
+                const double e_val = getEnk(v + 1, v - u)
+                    + link_e(x_last_bead, u, x_first_bead, u + 1)   // connect u to u+1
+                    - link_e(x_first_bead, u + 1, x_last_bead, v)   // break cycle [u+1,v]
+                    + link_e(x_first_bead, u, x_last_bead, v);      // close cycle from v to u
+                const double a_val = getAnk(v + 1, v - u)
+                    + link_a(x_last_bead, u, x_first_bead, u + 1)
+                    - link_a(x_first_bead, u + 1, x_last_bead, v)
+                    + link_a(x_first_bead, u, x_last_bead, v);
+
+                setEnk(v + 1, v - u + 1, e_val);
+                setAnk(v + 1, v - u + 1, a_val);
+            }
+        }
+        return;
+    }
+
     for (int i = 0; i < nbosons; i++) {
         // temp_nbosons_array[i] is E^[i,i]
         temp_nbosons_array[i] = getBeadsSeparationSquared(x_first_bead, i, x_last_bead, i);
@@ -58,6 +102,16 @@ void BosonicExchange::evaluateCycleEnergies() {
             setEnk(v + 1, v - u + 1, val);
         }
     }
+}
+
+double BosonicExchange::getAnk(int m, int k) const {
+    int end_of_m = m * (m + 1) / 2;
+    return A_kn[end_of_m - k];
+}
+
+void BosonicExchange::setAnk(int m, int k, double val) {
+    int end_of_m = m * (m + 1) / 2;
+    A_kn[end_of_m - k] = val;
 }
 
 double BosonicExchange::getEnk(int m, int k) const {
@@ -167,6 +221,8 @@ void BosonicExchange::springForceLastBead(dVec& f) {
 
             double prob = connection_probabilities[nbosons * l + next_l];
 
+            if (sim.winding_springs) sim.linkMeanSeparation(diff_next, diff_next);
+
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_next[axis];
             }
@@ -174,6 +230,7 @@ void BosonicExchange::springForceLastBead(dVec& f) {
 
         double diff_prev[NDIM];
         getBeadsSeparation(x, l, x_prev, l, diff_prev);
+        if (sim.winding_springs) sim.linkMeanSeparation(diff_prev, diff_prev);
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_prev[axis];
@@ -196,6 +253,8 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
 
             double prob = connection_probabilities[nbosons * prev_l + l];
 
+            if (sim.winding_springs) sim.linkMeanSeparation(diff_prev, diff_prev);
+
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_prev[axis];
             }
@@ -203,6 +262,7 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
 
         double diff_next[NDIM];
         getBeadsSeparation(x, l, x_next, l, diff_next);
+        if (sim.winding_springs) sim.linkMeanSeparation(diff_next, diff_next);
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_next[axis];
@@ -262,8 +322,11 @@ double BosonicExchange::primEstimator() {
 
         for (int k = m; k > 0; --k) {
             const double e_kn_val = getEnk(m, k);
+            // With winding sums the Boltzmann weight uses E_kn (log weights) while the estimator needs
+            // the spring-energy expectation A_kn; the two coincide for minimum-image springs.
+            const double a_kn_val = sim.winding_springs ? getAnk(m, k) : e_kn_val;
 
-            sig += (prim_est[m - k] - e_kn_val) * exp(-beta * (e_kn_val + V[m - k] - e_shift));
+            sig += (prim_est[m - k] - a_kn_val) * exp(-beta * (e_kn_val + V[m - k] - e_shift));
         }
 
         const double sig_denom_m = m * exp(-beta * (V[m] - e_shift));

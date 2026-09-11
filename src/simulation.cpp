@@ -13,6 +13,7 @@
 #include "normal_modes.h"
 #include "moves.h"
 #include "simulation.h"
+#include "winding.h"
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
@@ -30,6 +31,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["bosonic"], bosonic);
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
+    getVariant(param_obj.sim["winding_springs"], winding_springs);
+    getVariant(param_obj.sim["max_wind"], max_wind);
 
     getVariant(param_obj.sys["temperature"], temperature);
     getVariant(param_obj.sys["natoms"], natoms);
@@ -414,6 +417,38 @@ void Simulation::updateNeighboringCoordinates() {
  * 
  * @param spring_force_arr Vector to store the spring forces.
  */
+/**
+ * @brief ln of the winding-summed weight of one link, product over Cartesian components.
+ */
+double Simulation::linkLogWeight(const double diff[NDIM]) const {
+    double result = 0.0;
+    for (int axis = 0; axis < NDIM; ++axis) {
+        result += WindingProbability(diff[axis], max_wind, beta_half_k, size).logWeight();
+    }
+    return result;
+}
+
+/**
+ * @brief Expectation of the spring energy (k/2)|d + wL|^2 of one link over its winding distribution.
+ */
+double Simulation::linkEnergyExpectation(const double diff[NDIM]) const {
+    double result = 0.0;
+    for (int axis = 0; axis < NDIM; ++axis) {
+        result += WindingProbability(diff[axis], max_wind, beta_half_k, size).diffSquaredExpectation();
+    }
+    return 0.5 * spring_constant * result;
+}
+
+/**
+ * @brief d + L<w> per component: the force on the bead at the origin of d is k (d + L<w>),
+ * since -d/dx [-(1/beta_P) ln mu] = k sum_w p_w (d + wL).
+ */
+void Simulation::linkMeanSeparation(const double diff[NDIM], double out[NDIM]) const {
+    for (int axis = 0; axis < NDIM; ++axis) {
+        out[axis] = diff[axis] + size * WindingProbability(diff[axis], max_wind, beta_half_k, size).expectation();
+    }
+}
+
 void Simulation::updateSpringForces(dVec& spring_force_arr) const {
     if (is_bosonic_bead) {
         // If the simulation is bosonic and the current bead is either 1 or P, we calculate
@@ -436,6 +471,12 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
                 applyMinimumImage(diff_next, size);
             }
 #endif
+
+            if (winding_springs) {
+                // Image-summed springs: k (d + L<w>) for each of the two links
+                diff_prev += size * WindingProbability(diff_prev, max_wind, beta_half_k, size).expectation();
+                diff_next += size * WindingProbability(diff_next, max_wind, beta_half_k, size).expectation();
+            }
 
             spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
         }
@@ -499,7 +540,12 @@ double Simulation::classicalSpringEnergy() const {
             }
 #endif
 
-            interior_spring_energy += diff * diff;
+            if (winding_springs) {
+                // Expectation of (d + wL)^2 over the winding distribution of the link
+                interior_spring_energy += WindingProbability(diff, max_wind, beta_half_k, size).diffSquaredExpectation();
+            } else {
+                interior_spring_energy += diff * diff;
+            }
         }
     }
 
@@ -594,6 +640,10 @@ void Simulation::printReport(double wall_time) const {
 
     report_file << "---------\nFeatures\n---------\n";
     report_file << formattedReportLine("Minimum image convention", MINIM);
+    report_file << formattedReportLine("Winding-sum springs", winding_springs);
+    if (winding_springs) {
+        report_file << formattedReportLine("Maximum winding number", max_wind);
+    }
     report_file << formattedReportLine("Wrapping of coordinates", WRAP);
     report_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
 

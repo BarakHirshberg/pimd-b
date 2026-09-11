@@ -7,6 +7,9 @@
 #include "simulation.h"
 
 FactorialBosonicExchange::FactorialBosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim), labels(_sim.natoms) {
+    if (_sim.winding_springs) {
+        throw std::invalid_argument("winding_springs is implemented for the quadratic bosonic algorithm only!");
+    }
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);
 

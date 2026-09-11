@@ -41,6 +41,13 @@ public:
     bool bosonic;       // Is the simulation bosonic?
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
+    bool winding_springs;  // Winding-sum (image-summed) spring weights instead of minimum-image springs
+    int max_wind;          // Number of images per direction in the winding sums
+
+    // Helpers for one link with minimum-image separation diff[] (winding_springs only)
+    double linkLogWeight(const double diff[NDIM]) const;          // ln prod_axis mu(diff)
+    double linkEnergyExpectation(const double diff[NDIM]) const;  // (k/2) <|diff + wL|^2>
+    void linkMeanSeparation(const double diff[NDIM], double out[NDIM]) const;  // diff + L <w>
     bool nmthermostat;  // Couple thermostat to normal modes
 
     int    n_perm_samples; // Permutations sampled per measurement (permutation/winding observables)

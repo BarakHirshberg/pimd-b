@@ -1501,3 +1501,207 @@ events:
         
       exitCode: 0
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1499 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+      binary: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib"
+      CMAKE_MODULE_PATH: "/storage/debug_He/external/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_8fe84/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_8fe84.dir/build.make CMakeFiles/cmTC_8fe84.dir/build
+        gmake[1]: Entering directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_8fe84.dir/test_mpi.c.o
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicc   -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -o CMakeFiles/cmTC_8fe84.dir/test_mpi.c.o -c /home/hirshb/micromamba/envs/he-bpimd/share/cmake-3.28/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_8fe84
+        /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8fe84.dir/link.txt --verbose=1
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicc -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib  CMakeFiles/cmTC_8fe84.dir/test_mpi.c.o -o cmTC_8fe84 
+        gmake[1]: Leaving directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1499 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+      binary: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib"
+      CMAKE_MODULE_PATH: "/storage/debug_He/external/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_78f87/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_78f87.dir/build.make CMakeFiles/cmTC_78f87.dir/build
+        gmake[1]: Entering directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_78f87.dir/test_mpi.cpp.o
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx   -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -o CMakeFiles/cmTC_78f87.dir/test_mpi.cpp.o -c /storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_78f87
+        /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E cmake_link_script CMakeFiles/cmTC_78f87.dir/link.txt --verbose=1
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib  CMakeFiles/cmTC_78f87.dir/test_mpi.cpp.o -o cmTC_78f87 
+        gmake[1]: Leaving directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+      binary: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib"
+      CMAKE_MODULE_PATH: "/storage/debug_He/external/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_1b35d/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_1b35d.dir/build.make CMakeFiles/cmTC_1b35d.dir/build
+        gmake[1]: Entering directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_1b35d.dir/test_mpi.cpp.o
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx   -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -o CMakeFiles/cmTC_1b35d.dir/test_mpi.cpp.o -c /storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_1b35d
+        /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1b35d.dir/link.txt --verbose=1
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib  CMakeFiles/cmTC_1b35d.dir/test_mpi.cpp.o -o cmTC_1b35d 
+        gmake[1]: Leaving directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1499 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+      binary: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib"
+      CMAKE_MODULE_PATH: "/storage/debug_He/external/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_c586e/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_c586e.dir/build.make CMakeFiles/cmTC_c586e.dir/build
+        gmake[1]: Entering directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_c586e.dir/test_mpi.c.o
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicc   -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -o CMakeFiles/cmTC_c586e.dir/test_mpi.c.o -c /home/hirshb/micromamba/envs/he-bpimd/share/cmake-3.28/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_c586e
+        /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c586e.dir/link.txt --verbose=1
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicc -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib  CMakeFiles/cmTC_c586e.dir/test_mpi.c.o -o cmTC_c586e 
+        gmake[1]: Leaving directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1499 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+      binary: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib"
+      CMAKE_MODULE_PATH: "/storage/debug_He/external/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_dcc0e/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_dcc0e.dir/build.make CMakeFiles/cmTC_dcc0e.dir/build
+        gmake[1]: Entering directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_dcc0e.dir/test_mpi.cpp.o
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx   -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -o CMakeFiles/cmTC_dcc0e.dir/test_mpi.cpp.o -c /storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_dcc0e
+        /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E cmake_link_script CMakeFiles/cmTC_dcc0e.dir/link.txt --verbose=1
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib  CMakeFiles/cmTC_dcc0e.dir/test_mpi.cpp.o -o cmTC_dcc0e 
+        gmake[1]: Leaving directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+      binary: "/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib"
+      CMAKE_MODULE_PATH: "/storage/debug_He/external/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_6754a/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_6754a.dir/build.make CMakeFiles/cmTC_6754a.dir/build
+        gmake[1]: Entering directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_6754a.dir/test_mpi.cpp.o
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx   -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -o CMakeFiles/cmTC_6754a.dir/test_mpi.cpp.o -c /storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_6754a
+        /home/hirshb/micromamba/envs/he-bpimd/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6754a.dir/link.txt --verbose=1
+        /home/hirshb/micromamba/envs/he-bpimd/bin/mpicxx -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/hirshb/micromamba/envs/he-bpimd/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/hirshb/micromamba/envs/he-bpimd/lib -Wl,-rpath-link,/home/hirshb/micromamba/envs/he-bpimd/lib -L/home/hirshb/micromamba/envs/he-bpimd/lib  CMakeFiles/cmTC_6754a.dir/test_mpi.cpp.o -o cmTC_6754a 
+        gmake[1]: Leaving directory '/storage/debug_He/external/pimd-b/build-3d-quadratic/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...

@@ -42,6 +42,13 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     sim["fixcom"] = reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
+    // Rigorous periodic springs: sum over periodic images of every link (JCP 163, 024101 (2025))
+    sim["winding_springs"] = reader.GetBoolean(Sections::SIMULATION, "winding_springs", false);
+    sim["max_wind"] = reader.GetInteger(Sections::SIMULATION, "max_wind", 1);
+    if (std::get<bool>(sim["winding_springs"]) && !std::get<bool>(sim["pbc"]))
+        throw std::invalid_argument("winding_springs requires periodic boundary conditions (pbc = true)!");
+    if (std::get<int>(sim["max_wind"]) < 1)
+        throw std::invalid_argument("max_wind must be at least 1!");
     // Couple thermostat to normal modes?
     bool nmthermostat = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
     sim["nmthermostat"] = nmthermostat;

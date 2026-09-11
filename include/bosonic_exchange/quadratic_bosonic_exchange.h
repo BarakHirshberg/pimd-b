@@ -39,6 +39,10 @@ private:
     void evaluateVBackwards();
 
     std::vector<double> E_kn;
+    std::vector<double> A_kn;  // Spring-energy expectations (winding_springs only; equals E_kn otherwise)
+    std::vector<double> a_temp_nbosons_array;
+    double getAnk(int m, int k) const;
+    void setAnk(int m, int k, double val);
     std::vector<double> V;
     std::vector<double> V_backwards;
     std::vector<double> connection_probabilities;

@@ -338,4 +338,5 @@ CMakeFiles/pimdb.dir/src/bosonic_exchange/quadratic_bosonic_exchange.cpp.o: \
  /storage/debug_He/external/pimd-b/include/potentials/double_well.h \
  /storage/debug_He/external/pimd-b/include/potentials/harmonic.h \
  /storage/debug_He/external/pimd-b/include/bosonic_exchange.h \
- /storage/debug_He/external/pimd-b/include/bosonic_exchange/factorial_bosonic_exchange.h
+ /storage/debug_He/external/pimd-b/include/bosonic_exchange/factorial_bosonic_exchange.h \
+ /storage/debug_He/external/pimd-b/include/winding.h

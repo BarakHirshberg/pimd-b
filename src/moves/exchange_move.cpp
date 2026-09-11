@@ -16,6 +16,9 @@ ExchangeMove::ExchangeMove(Simulation& _sim, int _max_segment, int attempts, uns
     path_b(_sim.nbeads),
     gather_buffer(2 * NDIM * _sim.nbeads),
     proposal_buffer(4 + 2 * NDIM * std::max(1, std::min(_max_segment, _sim.nbeads - 2))) {
+    if (_sim.winding_springs) {
+        throw std::invalid_argument("The exchange move does not support winding_springs yet (minimum-image spring energies).");
+    }
     if (max_segment < 1) {
         throw std::invalid_argument("The exchange move requires at least 3 beads (nbeads >= 3).");
     }

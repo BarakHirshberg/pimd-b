@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "observables/observable.h"
+#include "common.h"
+#include <array>
 
 class Simulation; // Forward declaration
 
@@ -41,6 +43,10 @@ private:
 
     bool winding;
     std::vector<int> gperm;  // Geometric (nearest-neighbour) permutation, Myung et al. PRL 2022 SI Alg. 1
+    std::mt19937 link_gen;   // Per-rank stream for sampling link winding numbers (winding_springs only)
+
+    // Minimum-image separation of a link plus, with winding_springs, a sampled image shift w L
+    void linkVector(const dVec& from, int l_from, const dVec& to, int l_to, std::array<double, NDIM>& out);
 
     void geometricPermutation();
     int nsamples;

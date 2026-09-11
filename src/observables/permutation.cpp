@@ -1,6 +1,7 @@
 #include "observables/permutation.h"
 #include "simulation.h"
 #include "units.h"
+#include "winding.h"
 #include "mpi.h"
 
 #include <algorithm>
@@ -17,6 +18,7 @@ PermutationObservable::PermutationObservable(const Simulation& _sim, int _freq, 
     winding(_winding),
     nsamples(_sim.n_perm_samples),
     gen(_sim.params_seed + 7919),  // Dedicated stream: must not perturb the thermostat random numbers
+    link_gen(_sim.params_seed + 7919 + 104729u * static_cast<unsigned int>(_sim.this_bead + 1)),
     perm(_sim.natoms),
     hist(_sim.natoms, 0),
     gperm(_sim.natoms),
@@ -51,11 +53,11 @@ void PermutationObservable::calculate() {
 
     if (winding) {
         if (sim.this_bead != sim.nbeads - 1) {
+            std::array<double, NDIM> link = {};
             for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+                linkVector(sim.coord, ptcl_idx, sim.next_coord, ptcl_idx, link);
                 for (int axis = 0; axis < NDIM; ++axis) {
-                    double diff = sim.next_coord(ptcl_idx, axis) - sim.coord(ptcl_idx, axis);
-                    applyMinimumImage(diff, sim.size);
-                    interior_local[axis] += diff;
+                    interior_local[axis] += link[axis];
                 }
             }
         }
@@ -96,11 +98,11 @@ void PermutationObservable::calculate() {
         if (winding) {
             // Exterior links: last bead (prev_coord on rank 0) of l -> first bead (coord) of perm[l]
             std::array<double, NDIM> w = interior_total;
+            std::array<double, NDIM> link = {};
             for (int l = 0; l < sim.natoms; ++l) {
+                linkVector(sim.prev_coord, l, sim.coord, perm[l], link);
                 for (int axis = 0; axis < NDIM; ++axis) {
-                    double diff = sim.coord(perm[l], axis) - sim.prev_coord(l, axis);
-                    applyMinimumImage(diff, sim.size);
-                    w[axis] += diff;
+                    w[axis] += link[axis];
                 }
             }
             double w2_sample = 0.0;
@@ -127,13 +129,13 @@ void PermutationObservable::calculate() {
         // Approximate geometric reconstruction (PRL 2022 SI Alg. 1), deterministic given the configuration
         geometricPermutation();
         std::array<double, NDIM> wg = interior_total;
+        std::array<double, NDIM> link = {};
         int in_exchange_geom = 0;
         for (int l = 0; l < sim.natoms; ++l) {
             if (gperm[l] != l) ++in_exchange_geom;
+            linkVector(sim.prev_coord, l, sim.coord, gperm[l], link);
             for (int axis = 0; axis < NDIM; ++axis) {
-                double diff = sim.coord(gperm[l], axis) - sim.prev_coord(l, axis);
-                applyMinimumImage(diff, sim.size);
-                wg[axis] += diff;
+                wg[axis] += link[axis];
             }
         }
         double w2_geom = 0.0;
@@ -221,5 +223,23 @@ void PermutationObservable::geometricPermutation() {
         }
         gperm[l] = best;
         used[best] = 1;
+    }
+}
+
+/**
+ * @brief Link vector from bead (from, l_from) to bead (to, l_to): the minimum-image separation, plus a
+ * sampled image shift w L when the springs are winding-summed. With winding_springs the MD configuration
+ * only fixes the minimum-image representative of every link; the physical winding of the link is
+ * distributed according to p_w of WindingProbability, and sampling it makes W an exact estimator.
+ */
+void PermutationObservable::linkVector(const dVec& from, int l_from, const dVec& to, int l_to, std::array<double, NDIM>& out) {
+    for (int axis = 0; axis < NDIM; ++axis) {
+        double diff = to(l_to, axis) - from(l_from, axis);
+        applyMinimumImage(diff, sim.size);
+        if (sim.winding_springs) {
+            const WindingProbability wp(diff, sim.max_wind, sim.beta_half_k, sim.size);
+            diff += sim.size * wp.sample(link_gen);
+        }
+        out[axis] = diff;
     }
 }
