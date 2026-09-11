@@ -16,6 +16,9 @@ public:
     double getLongestProbability() override;
 
     void printBosonicDebug() override;
+
+    void samplePermutation(std::vector<int>& perm, std::mt19937& gen) const override;
+    double getConnectionProbability(int l, int u) const override;
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;
@@ -25,6 +28,7 @@ private:
     int lastBeadNeighbor(int ptcl_idx) const;
 
     double getMinExteriorSpringEnergy();
+    double exteriorSpringEnergy(const std::vector<int>& permutation) const;
 
     std::vector<int> labels;  // Particle labels
 

@@ -58,6 +58,10 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     rand_gen.seed(params_seed + rank);
     mars_gen = std::make_unique<RanMars>(params_seed + rank);
 
+    getVariant(param_obj.sim["n_perm_samples"], n_perm_samples);
+    getVariant(param_obj.sim["rdf_bins"], rdf_bins);
+    getVariant(param_obj.sim["rdf_rmax"], rdf_rmax);
+
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
@@ -792,8 +796,8 @@ void Simulation::initializeStates(const StringMap& sim_params) {
  * @param observable_name Name of the observable.
  */
 void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name) {
-    if (const std::string& units = sim_params.at(param_key); units != "off") {
-        if (units == "none") {
+    if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
+        if (units == "none" || units == "on" || units == "true") {
             observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, ""));
         } else {
             observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, units));
@@ -815,6 +819,21 @@ void Simulation::initializeObservables(const StringMap& sim_params) {
     }
 
     addObservableIfEnabled(sim_params, "gsf", "gsf");
+
+    // Exchange diagnostics are meaningful only for bosons; the RDF is always available
+    if (bosonic) {
+        addObservableIfEnabled(sim_params, "connection", "connection");
+
+        // "winding" extends "permutation" (same sampled permutations plus the winding number),
+        // so only one of the two observables is created.
+        if (sim_params.at("winding") != "off" && sim_params.at("winding") != "false") {
+            addObservableIfEnabled(sim_params, "winding", "winding");
+        } else {
+            addObservableIfEnabled(sim_params, "permutation", "permutation");
+        }
+    }
+
+    addObservableIfEnabled(sim_params, "rdf", "rdf");
 }
 
 /**

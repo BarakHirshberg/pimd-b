@@ -40,6 +40,10 @@ public:
     bool pbc;           // Enable periodic boundary conditions?
     bool nmthermostat;  // Couple thermostat to normal modes
 
+    int    n_perm_samples; // Permutations sampled per measurement (permutation/winding observables)
+    int    rdf_bins;       // Number of bins of the radial distribution function
+    double rdf_rmax;       // Maximum distance of the radial distribution function (<= 0: half the box)
+
     bool out_pos;       // Output trajectories?
     bool out_vel;       // Output velocities?
     bool out_force;     // Output forces?

@@ -257,6 +257,24 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
     observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
     observables["gsf"] = reader.Get(Sections::OBSERVABLES, "gsf", "off");
+
+    // Exchange diagnostics (bosonic simulations only) and the radial distribution function
+    observables["connection"] = reader.Get(Sections::OBSERVABLES, "connection", "off");
+    observables["permutation"] = reader.Get(Sections::OBSERVABLES, "permutation", "off");
+    observables["winding"] = reader.Get(Sections::OBSERVABLES, "winding", "off");
+    observables["rdf"] = reader.Get(Sections::OBSERVABLES, "rdf", "off");
+
+    // Settings of the above observables (stored with the simulation parameters)
+    sim["n_perm_samples"] = reader.GetInteger(Sections::OBSERVABLES, "n_perm_samples", 1);
+    if (int n = std::get<int>(sim["n_perm_samples"]); n < 1)
+        throw std::invalid_argument(std::format("The number of permutation samples ({}) must be positive!", n));
+
+    sim["rdf_bins"] = reader.GetInteger(Sections::OBSERVABLES, "rdf_bins", 100);
+    if (int n = std::get<int>(sim["rdf_bins"]); n < 1)
+        throw std::invalid_argument(std::format("The number of rdf bins ({}) must be positive!", n));
+
+    // A non-positive rdf_rmax means "half the box size"
+    sim["rdf_rmax"] = getQuantity("length", reader.Get(Sections::OBSERVABLES, "rdf_rmax", "-1.0 angstrom"));
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {

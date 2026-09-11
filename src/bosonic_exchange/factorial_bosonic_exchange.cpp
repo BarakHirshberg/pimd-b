@@ -1,4 +1,5 @@
 #include <array>
+#include <random>
 #include <numeric>
 #include <algorithm>
 
@@ -290,6 +291,62 @@ double FactorialBosonicExchange::primEstimator() {
 #endif
 
     return (-1.0) * bosonic_spring_energy;
+}
+
+/**
+ * Exterior spring energy of a given permutation (last bead of l connected to first bead of
+ * permutation[l]), used by the enumeration-based estimators.
+ */
+double FactorialBosonicExchange::exteriorSpringEnergy(const std::vector<int>& permutation) const {
+    dVec x_first_bead(nbosons);
+    dVec x_last_bead(nbosons);
+    assignFirstLast(x_first_bead, x_last_bead);
+
+    double diff2 = 0.0;
+    for (int l = 0; l < nbosons; ++l) {
+        diff2 += getBeadsSeparationSquared(x_last_bead, l, x_first_bead, permutation[l]);
+    }
+    return 0.5 * spring_constant * diff2;
+}
+
+/**
+ * Samples a permutation with probability proportional to exp(-beta*E^sigma) by enumerating all N!
+ * permutations (label independent; intended for N <= 7 as a reference for the quadratic algorithm).
+ */
+void FactorialBosonicExchange::samplePermutation(std::vector<int>& perm, std::mt19937& gen) const {
+    std::vector<int> permutation(nbosons);
+    std::iota(permutation.begin(), permutation.end(), 0);
+
+    std::vector<std::vector<int>> all_perms;
+    std::vector<double> weights;
+    do {
+        all_perms.push_back(permutation);
+        weights.push_back(exp(-beta * (exteriorSpringEnergy(permutation) - e_shift)));
+    } while (std::ranges::next_permutation(permutation).found);
+
+    std::discrete_distribution<int> pick(weights.begin(), weights.end());
+    perm = all_perms[pick(gen)];
+}
+
+/**
+ * Probability that the last bead of particle l is connected to the first bead of particle u,
+ * obtained by enumerating all permutations.
+ */
+double FactorialBosonicExchange::getConnectionProbability(int l, int u) const {
+    std::vector<int> permutation(nbosons);
+    std::iota(permutation.begin(), permutation.end(), 0);
+
+    double numerator = 0.0;
+    double denominator = 0.0;
+    do {
+        const double weight = exp(-beta * (exteriorSpringEnergy(permutation) - e_shift));
+        denominator += weight;
+        if (permutation[l] == u) {
+            numerator += weight;
+        }
+    } while (std::ranges::next_permutation(permutation).found);
+
+    return numerator / denominator;
 }
 
 void FactorialBosonicExchange::printBosonicDebug() {

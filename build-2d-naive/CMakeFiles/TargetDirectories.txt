@@ -1,0 +1,3 @@
+/storage/debug_He/external/pimd-b/build-2d-naive/CMakeFiles/pimdb.dir
+/storage/debug_He/external/pimd-b/build-2d-naive/CMakeFiles/edit_cache.dir
+/storage/debug_He/external/pimd-b/build-2d-naive/CMakeFiles/rebuild_cache.dir

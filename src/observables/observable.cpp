@@ -52,6 +52,14 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
         return std::make_unique<BosonicObservable>(_sim, _freq, _out_unit);
     } else if (observable_type == "gsf") {
         return std::make_unique<GSFActionObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "connection") {
+        return std::make_unique<ConnectionObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "permutation") {
+        return std::make_unique<PermutationObservable>(_sim, _freq, _out_unit, false);
+    } else if (observable_type == "winding") {
+        return std::make_unique<PermutationObservable>(_sim, _freq, _out_unit, true);
+    } else if (observable_type == "rdf") {
+        return std::make_unique<RDFObservable>(_sim, _freq, _out_unit);
     } else {
         throw std::invalid_argument("Unknown observable type.");
     }

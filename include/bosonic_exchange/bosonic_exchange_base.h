@@ -1,5 +1,8 @@
 #pragma once
 
+#include <random>
+#include <vector>
+
 #include "common.h"
 
 class Simulation; // Forward declaration
@@ -30,6 +33,27 @@ public:
     virtual double getLongestProbability() = 0;
 
     virtual void printBosonicDebug() = 0;
+
+    /**
+     * Draws a permutation from the exact conditional distribution of ring-polymer connectivities
+     * given the current coordinates, i.e., with probability proportional to exp(-beta*E^sigma)
+     * (over the permutations that appear in the effective potential). The convention is that the
+     * last bead (P) of particle l is connected to the first bead (1) of particle perm[l].
+     * Requires prepare() to have been called for the current coordinates.
+     *
+     * @param[out] perm Sampled permutation (size N).
+     * @param gen Random number generator.
+     */
+    virtual void samplePermutation(std::vector<int>& perm, std::mt19937& gen) const = 0;
+
+    /**
+     * Probability that the last bead of particle l is connected to the first bead of particle u.
+     *
+     * @param l Particle index of the last bead.
+     * @param u Particle index of the first bead.
+     * @return Connection probability (zero for connections that cannot occur).
+     */
+    virtual double getConnectionProbability(int l, int u) const = 0;
 
 protected:
     void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;

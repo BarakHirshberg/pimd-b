@@ -278,6 +278,59 @@ double BosonicExchange::primEstimator() {
 #endif
 }
 
+/**
+ * Samples a representative permutation by stochastic backtracking through the recursion
+ * exp(-beta*V[m]) = (1/m) sum_k exp(-beta*(V[m-k] + E^[m-k+1,m])): starting from m = N, the length k
+ * of the cycle that contains the particle with the highest index is drawn with probability
+ * (1/m) exp(-beta*(V[m-k] + E^[m-k+1,m] - V[m])), and the procedure is repeated for the remaining
+ * m-k particles. The result has exactly the distribution implied by the effective potential,
+ * so averages of any function of the connectivity (cycle lengths, winding numbers) are exact
+ * estimators of the corresponding bosonic quantities. Cost is O(N) per sample.
+ *
+ * @param[out] perm Sampled permutation: last bead of l connects to first bead of perm[l].
+ * @param gen Random number generator.
+ */
+void BosonicExchange::samplePermutation(std::vector<int>& perm, std::mt19937& gen) const {
+    perm.assign(nbosons, 0);
+    std::uniform_real_distribution<double> uniform(0.0, 1.0);
+
+    int m = nbosons;
+    while (m > 0) {
+        const double u = uniform(gen);
+        double cumulative = 0.0;
+        int chosen_k = m;
+
+        for (int k = 1; k <= m; ++k) {
+            // Conditional probability that the last cycle has length k (sums to one by construction)
+            cumulative += exp(-beta * (getEnk(m, k) + V[m - k] - V[m])) / m;
+            if (u < cumulative) {
+                chosen_k = k;
+                break;
+            }
+        }
+
+        // Cycle over particles m-k, ..., m-1 (zero-based): l -> l+1, and m-1 -> m-k
+        const int first = m - chosen_k;
+        for (int l = first; l < m - 1; ++l) {
+            perm[l] = l + 1;
+        }
+        perm[m - 1] = first;
+
+        m = first;
+    }
+}
+
+/**
+ * Probability that the last bead of particle l is connected to the first bead of particle u.
+ * Nonzero only for u = l+1 (continuing a cycle) or u <= l (closing a cycle).
+ */
+double BosonicExchange::getConnectionProbability(int l, int u) const {
+    if (u > l + 1 || u < 0 || l >= nbosons || u >= nbosons) {
+        return 0.0;
+    }
+    return connection_probabilities[nbosons * l + u];
+}
+
 void BosonicExchange::printBosonicDebug() {
     if (sim.this_bead == 0) {
         std::ofstream debug;

@@ -1,0 +1,3 @@
+/storage/debug_He/external/pimd-b/build-2d-quadratic/CMakeFiles/pimdb.dir
+/storage/debug_He/external/pimd-b/build-2d-quadratic/CMakeFiles/edit_cache.dir
+/storage/debug_He/external/pimd-b/build-2d-quadratic/CMakeFiles/rebuild_cache.dir

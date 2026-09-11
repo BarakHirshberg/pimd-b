@@ -20,6 +20,9 @@ public:
 
     void printBosonicDebug() override;
 
+    void samplePermutation(std::vector<int>& perm, std::mt19937& gen) const override;
+    double getConnectionProbability(int l, int u) const override;
+
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;
