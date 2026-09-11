@@ -19,6 +19,7 @@ PermutationObservable::PermutationObservable(const Simulation& _sim, int _freq, 
     gen(_sim.params_seed + 7919),  // Dedicated stream: must not perturb the thermostat random numbers
     perm(_sim.natoms),
     hist(_sim.natoms, 0),
+    gperm(_sim.natoms),
     total_samples(0),
     hist_filename(std::format("{}/cycles.dat", Output::FOLDER_NAME)) {
     if (winding && !sim.pbc) {
@@ -26,7 +27,7 @@ PermutationObservable::PermutationObservable(const Simulation& _sim, int _freq, 
     }
 
     if (winding) {
-        initialize({ "n_cycles", "cycle_max", "p_exch", "w2", "rho_s" });
+        initialize({ "n_cycles", "cycle_max", "p_exch", "w2", "rho_s", "p_exch_geom", "w2_geom", "rho_s_geom" });
     } else {
         initialize({ "n_cycles", "cycle_max", "p_exch" });
     }
@@ -118,9 +119,30 @@ void PermutationObservable::calculate() {
         w2 /= nsamples;
         // rho_s/rho = m <W^2> / (d hbar^2 beta N) = <W^2> / (2 lambda beta N d), lambda = hbar^2/(2m)
         const double lambda = Constants::hbar * Constants::hbar / (2.0 * sim.mass);
-        quantities["rho_s"] = w2 / (2.0 * lambda * sim.beta * sim.natoms * NDIM);
+        const double rho_s_norm = 1.0 / (2.0 * lambda * sim.beta * sim.natoms * NDIM);
+        quantities["rho_s"] = w2 * rho_s_norm;
         const double len = Units::convertToUser("length", out_unit.empty() ? "atomic_unit" : out_unit, 1.0);
         quantities["w2"] = w2 * len * len;
+
+        // Approximate geometric reconstruction (PRL 2022 SI Alg. 1), deterministic given the configuration
+        geometricPermutation();
+        std::array<double, NDIM> wg = interior_total;
+        int in_exchange_geom = 0;
+        for (int l = 0; l < sim.natoms; ++l) {
+            if (gperm[l] != l) ++in_exchange_geom;
+            for (int axis = 0; axis < NDIM; ++axis) {
+                double diff = sim.coord(gperm[l], axis) - sim.prev_coord(l, axis);
+                applyMinimumImage(diff, sim.size);
+                wg[axis] += diff;
+            }
+        }
+        double w2_geom = 0.0;
+        for (int axis = 0; axis < NDIM; ++axis) {
+            w2_geom += wg[axis] * wg[axis];
+        }
+        quantities["p_exch_geom"] = static_cast<double>(in_exchange_geom) / sim.natoms;
+        quantities["w2_geom"] = w2_geom * len * len;
+        quantities["rho_s_geom"] = w2_geom * rho_s_norm;
     }
 
     if (sim.getStep() % sim.sfreq == 0) {
@@ -137,5 +159,67 @@ void PermutationObservable::writeHistogram() {
     for (int k = 1; k <= sim.natoms; ++k) {
         const double prob = (total_samples > 0) ? static_cast<double>(hist[k - 1]) / total_samples : 0.0;
         file << std::format("{:>8d} {:>14d} {:>14.8e}\n", k, hist[k - 1], prob);
+    }
+}
+
+/**
+ * @brief Geometric permutation of Myung, Hirshberg & Parrinello (PRL 2022, SI Sec. III.C, Alg. 1).
+ *
+ * The last bead of every particle l is joined to the nearest (minimum-image) first bead among all
+ * particles. Conflicts (two last beads choosing the same first bead) are resolved greedily in particle
+ * order by reverting the later one to its own first bead if that is still free; any last beads left
+ * unassigned are finally matched to the remaining free first beads by nearest distance ("close any
+ * open rings"). The result is a permutation, but not a sample of the bosonic ensemble: it is an
+ * approximate estimator kept here only to test the published procedure against the exact one.
+ */
+void PermutationObservable::geometricPermutation() {
+    const int n = sim.natoms;
+    std::vector<int> used(n, 0);
+    std::fill(gperm.begin(), gperm.end(), -1);
+
+    auto dist2 = [&](int l, int j) {
+        double d2 = 0.0;
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff = sim.coord(j, axis) - sim.prev_coord(l, axis);
+            applyMinimumImage(diff, sim.size);
+            d2 += diff * diff;
+        }
+        return d2;
+    };
+
+    for (int l = 0; l < n; ++l) {
+        int best = -1;
+        double best_d2 = 0.0;
+        for (int j = 0; j < n; ++j) {
+            const double d2 = dist2(l, j);
+            if (best < 0 || d2 < best_d2) {
+                best = j;
+                best_d2 = d2;
+            }
+        }
+        if (used[best]) {
+            best = used[l] ? -1 : l;  // Revert the exchange if possible
+        }
+        if (best >= 0) {
+            gperm[l] = best;
+            used[best] = 1;
+        }
+    }
+
+    // Close open rings: match the remaining last beads to the remaining first beads (nearest first)
+    for (int l = 0; l < n; ++l) {
+        if (gperm[l] >= 0) continue;
+        int best = -1;
+        double best_d2 = 0.0;
+        for (int j = 0; j < n; ++j) {
+            if (used[j]) continue;
+            const double d2 = dist2(l, j);
+            if (best < 0 || d2 < best_d2) {
+                best = j;
+                best_d2 = d2;
+            }
+        }
+        gperm[l] = best;
+        used[best] = 1;
     }
 }
