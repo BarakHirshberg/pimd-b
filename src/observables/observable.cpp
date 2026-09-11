@@ -52,6 +52,8 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
         return std::make_unique<BosonicObservable>(_sim, _freq, _out_unit);
     } else if (observable_type == "gsf") {
         return std::make_unique<GSFActionObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "gsf_extra") {
+        return std::make_unique<GSFActionObservable>(_sim, _freq, _out_unit, true);
     } else if (observable_type == "connection") {
         return std::make_unique<ConnectionObservable>(_sim, _freq, _out_unit);
     } else if (observable_type == "permutation") {

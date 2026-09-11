@@ -315,6 +315,11 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
     observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
     observables["gsf"] = reader.Get(Sections::OBSERVABLES, "gsf", "off");
+    // gsf_extra adds the even-slice potential and the force-squared kinetic correction (PCCP 28, 17846 (2026))
+    observables["gsf_extra"] = reader.Get(Sections::OBSERVABLES, "gsf_extra", "off");
+    sim["gsf_alpha"] = reader.GetReal(Sections::OBSERVABLES, "gsf_alpha", 0.0);
+    if (double a = std::get<double>(sim["gsf_alpha"]); a < 0.0 || a > 1.0)
+        throw std::invalid_argument(std::format("The GSF parameter alpha ({}) must lie in [0, 1]!", a));
 
     // Exchange diagnostics (bosonic simulations only) and the radial distribution function
     observables["connection"] = reader.Get(Sections::OBSERVABLES, "connection", "off");

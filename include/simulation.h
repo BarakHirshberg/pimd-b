@@ -46,6 +46,7 @@ public:
     int    n_perm_samples; // Permutations sampled per measurement (permutation/winding observables)
     int    rdf_bins;       // Number of bins of the radial distribution function
     double rdf_rmax;       // Maximum distance of the radial distribution function (<= 0: half the box)
+    double gsf_alpha;      // Tuning parameter of the generalized Suzuki-Chin factorization weight
 
     bool out_pos;       // Output trajectories?
     bool out_vel;       // Output velocities?

@@ -62,6 +62,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["n_perm_samples"], n_perm_samples);
     getVariant(param_obj.sim["rdf_bins"], rdf_bins);
     getVariant(param_obj.sim["rdf_rmax"], rdf_rmax);
+    getVariant(param_obj.sim["gsf_alpha"], gsf_alpha);
 
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
@@ -898,6 +899,7 @@ void Simulation::initializeObservables(const StringMap& sim_params) {
     }
 
     addObservableIfEnabled(sim_params, "gsf", "gsf");
+    addObservableIfEnabled(sim_params, "gsf_extra", "gsf_extra");
 
     // Exchange diagnostics are meaningful only for bosons; the RDF is always available
     if (bosonic) {
