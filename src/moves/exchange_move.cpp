@@ -265,6 +265,7 @@ void ExchangeMove::attempt() {
             }
             sim.updateNeighboringCoordinates();
             sim.updateForces();
+            sim.configurationChanged();
         }
     }
 }

@@ -80,6 +80,9 @@ void TimeShiftMove::attempt() {
     }
     // Forces (and the exchange state on the bosonic ranks) correspond to the current bead assignment
     sim.updateForces();
+    if (accept) {
+        sim.configurationChanged();
+    }
 }
 
 double TimeShiftMove::acceptanceRatio() const {

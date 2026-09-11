@@ -115,6 +115,7 @@ public:
     int timeshift_freq;
     std::unique_ptr<TimeShiftMove> timeshift_move;
     void initializeMoves(const VariantMap& sim_params);
+    void configurationChanged();  // Notify the propagator that coordinates changed outside of its step
 
     void run();
 

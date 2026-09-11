@@ -104,6 +104,7 @@ void RelabelMove::attemptMetropolis() {
 
     if (n_acc > 0) {
         sim.updateForces();
+        sim.configurationChanged();
     } else if (sim.is_bosonic_bead) {
         // Rank 0 evaluated trial configurations; restore the exchange state of the actual one
         sim.bosonic_exchange->prepare();
@@ -142,6 +143,7 @@ void RelabelMove::attemptShuffle() {
     }
 
     sim.updateForces();
+    sim.configurationChanged();
 }
 
 double RelabelMove::acceptanceRatio() const {

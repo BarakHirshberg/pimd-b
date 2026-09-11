@@ -101,3 +101,14 @@ void NormalModesPropagator::momentaExternalForces() {
 #endif
     }
 }
+
+/**
+ * @brief Recomputes the cached physical and spring forces from the current coordinates. Called through
+ * Simulation::configurationChanged() after an accepted Monte Carlo move; without it the first half-kick
+ * of the next step would use the forces of the pre-move configuration (stale rows after a relabelling,
+ * stale beads after an imaginary-time shift).
+ */
+void NormalModesPropagator::refreshForces() {
+    sim.updatePhysicalForces(ext_forces);
+    sim.updateSpringForces(spring_forces);
+}

@@ -10,6 +10,12 @@ public:
     virtual ~Propagator() = default;
     
     virtual void step() = 0;
+
+    /**
+     * @brief Re-synchronise any force arrays cached by the propagator after the configuration was
+     * changed outside of step() (Monte Carlo label or exchange moves). Default: nothing cached.
+     */
+    virtual void refreshForces() {}
     void momentStep();
     void coordsStep();
 

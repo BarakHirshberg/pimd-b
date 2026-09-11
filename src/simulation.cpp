@@ -741,6 +741,14 @@ void Simulation::initializeExchangeAlgorithm() {
  *
  * @param sim_params Simulation parameters.
  */
+/**
+ * @brief Called by the Monte Carlo moves after they modified coordinates/momenta and refreshed
+ * Simulation::forces, so that propagators holding their own force caches stay consistent.
+ */
+void Simulation::configurationChanged() {
+    propagator->refreshForces();
+}
+
 void Simulation::initializeMoves(const VariantMap& sim_params) {
     getVariant(sim_params.at("relabel"), relabel);
     getVariant(sim_params.at("relabel_freq"), relabel_freq);

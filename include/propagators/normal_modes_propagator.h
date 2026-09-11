@@ -11,6 +11,7 @@ public:
     ~NormalModesPropagator() override = default;
 
     void step() override;
+    void refreshForces() override;
 
 private:
     double freq, c, s, m_omega;
