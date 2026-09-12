@@ -19,6 +19,7 @@ class Thermostat;
 class RelabelMove;
 class ExchangeMove;
 class TimeShiftMove;
+class SoftLinkMove;
 
 class Simulation
 {
@@ -120,9 +121,12 @@ public:
     std::unique_ptr<NormalModes> normal_modes;
 
     // Optional Monte Carlo relabelling of particles (bosonic simulations)
+    bool soft_link;
+    int soft_link_freq;
     bool relabel;
     int relabel_freq;
     std::unique_ptr<RelabelMove> relabel_move;
+    std::unique_ptr<SoftLinkMove> soft_link_move;
 
     // Optional Monte Carlo exchange (segment regrowth) move (bosonic simulations)
     bool exchange_move;

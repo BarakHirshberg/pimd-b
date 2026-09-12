@@ -91,6 +91,19 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     if (exchange_move && !bosonic)
         throw std::invalid_argument("The exchange move is only meaningful for bosonic simulations (bosonic = true)!");
 
+    // Softened exterior link (expanded ensemble); see SoftLinkMove
+    bool soft_link = reader.GetBoolean(Sections::SIMULATION, "soft_link", false);
+    sim["soft_link"] = soft_link;
+    sim["soft_link_freq"] = reader.GetInteger(Sections::SIMULATION, "soft_link_freq", 10);
+    if (int f = std::get<int>(sim["soft_link_freq"]); f < 1)
+        throw std::invalid_argument(std::format("soft_link_freq ({}) must be positive!", f));
+    sim["soft_link_ladder"] = reader.Get(Sections::SIMULATION, "soft_link_ladder", "1,2,4,8,16,32");
+    sim["soft_link_wl_step"] = reader.GetReal(Sections::SIMULATION, "soft_link_wl_step", 0.5);
+    sim["soft_link_seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION,
+        "soft_link_seed", reader.Get(Sections::SIMULATION, "seed", "1234"))));
+    if (soft_link && !bosonic)
+        throw std::invalid_argument("The softened-link move is only meaningful for bosonic simulations!");
+
     // Imaginary-time shift move (cyclic renumbering of the beads); see TimeShiftMove
     bool timeshift = reader.GetBoolean(Sections::SIMULATION, "timeshift", false);
     sim["timeshift"] = timeshift;
@@ -334,6 +347,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     observables["gsf"] = reader.Get(Sections::OBSERVABLES, "gsf", "off");
     // gsf_extra adds the even-slice potential and the force-squared kinetic correction (PCCP 28, 17846 (2026))
     observables["gsf_extra"] = reader.Get(Sections::OBSERVABLES, "gsf_extra", "off");
+    observables["soft_link"] = reader.Get(Sections::OBSERVABLES, "soft_link", "off");
     sim["gsf_alpha"] = reader.GetReal(Sections::OBSERVABLES, "gsf_alpha", 0.0);
     if (double a = std::get<double>(sim["gsf_alpha"]); a < 0.0 || a > 1.0)
         throw std::invalid_argument(std::format("The GSF parameter alpha ({}) must lie in [0, 1]!", a));

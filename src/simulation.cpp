@@ -271,6 +271,11 @@ void Simulation::run() {
             zeroMomentum();
         }
 
+        // Expanded ensemble over the stiffness of one exterior link (bosonic simulations, if enabled)
+        if (soft_link && step % soft_link_freq == 0) {
+            soft_link_move->attempt();
+        }
+
         // Monte Carlo relabelling of the particles (bosonic simulations, if enabled)
         if (relabel && step % relabel_freq == 0) {
             relabel_move->attempt();
@@ -627,6 +632,11 @@ void Simulation::printReport(double wall_time) const {
             report_file << formattedReportLine("Time-shift move", std::format("every {} steps", timeshift_freq));
             report_file << formattedReportLine("Time-shift acceptance", timeshift_move->acceptanceRatio());
         }
+        if (soft_link) {
+            report_file << formattedReportLine("Softened exterior link",
+                                               std::format("every {} steps", soft_link_freq));
+        }
+
         if (exchange_move) {
             report_file << formattedReportLine("Exchange move", std::format("every {} steps", exchange_freq));
             report_file << formattedReportLine("Exchange move acceptance", exchange_mc->acceptanceRatio());
@@ -834,6 +844,9 @@ void Simulation::initializeMoves(const VariantMap& sim_params) {
         relabel_move = std::make_unique<RelabelMove>(*this, std::get<std::string>(sim_params.at("relabel_mode")), attempts, seed);
     }
 
+    getVariant(sim_params.at("soft_link"), soft_link);
+    getVariant(sim_params.at("soft_link_freq"), soft_link_freq);
+    soft_link = soft_link && bosonic && natoms > 1;
     getVariant(sim_params.at("exchange_move"), exchange_move);
     getVariant(sim_params.at("exchange_freq"), exchange_freq);
     exchange_move = exchange_move && bosonic && natoms > 1 && nbeads > 2;
@@ -845,6 +858,24 @@ void Simulation::initializeMoves(const VariantMap& sim_params) {
         unsigned int seed;
         getVariant(sim_params.at("timeshift_seed"), seed);
         timeshift_move = std::make_unique<TimeShiftMove>(*this, seed);
+    }
+
+    if (soft_link) {
+        std::string ladder_str;
+        double wl_step;
+        unsigned int seed;
+        getVariant(sim_params.at("soft_link_ladder"), ladder_str);
+        getVariant(sim_params.at("soft_link_wl_step"), wl_step);
+        getVariant(sim_params.at("soft_link_seed"), seed);
+        std::vector<double> ladder;
+        for (size_t pos = 0; pos <= ladder_str.size();) {
+            const size_t comma = ladder_str.find(',', pos);
+            const std::string item = ladder_str.substr(pos, comma - pos);
+            if (!item.empty()) ladder.push_back(std::stod(item));
+            if (comma == std::string::npos) break;
+            pos = comma + 1;
+        }
+        soft_link_move = std::make_unique<SoftLinkMove>(*this, ladder, wl_step, seed);
     }
 
     if (exchange_move) {
@@ -979,6 +1010,7 @@ void Simulation::initializeObservables(const StringMap& sim_params) {
 
     addObservableIfEnabled(sim_params, "gsf", "gsf");
     addObservableIfEnabled(sim_params, "gsf_extra", "gsf_extra");
+    addObservableIfEnabled(sim_params, "soft_link", "soft_link");
 
     // Exchange diagnostics are meaningful only for bosons; the RDF is always available
     if (bosonic) {
