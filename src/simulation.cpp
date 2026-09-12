@@ -32,7 +32,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
     getVariant(param_obj.sim["winding_springs"], winding_springs);
-    soft_link_particle = -1;  // no softened link until the move (if enabled) picks one
+    soft_link_particle = 0;   // irrelevant while soft_link_count is 0
+    soft_link_count = 0;      // no softened link until the move (if enabled) enables one
     soft_link_gamma = 1.0;
     getVariant(param_obj.sim["max_wind"], max_wind);
 
@@ -875,9 +876,10 @@ void Simulation::initializeMoves(const VariantMap& sim_params) {
             if (comma == std::string::npos) break;
             pos = comma + 1;
         }
-        int start_rung = 0;
+        int start_rung = 0, nsoft = 0;
         getVariant(sim_params.at("soft_link_start_rung"), start_rung);
-        soft_link_move = std::make_unique<SoftLinkMove>(*this, ladder, wl_step, seed, start_rung);
+        getVariant(sim_params.at("soft_link_count"), nsoft);
+        soft_link_move = std::make_unique<SoftLinkMove>(*this, ladder, wl_step, seed, nsoft, start_rung);
     }
 
     if (exchange_move) {

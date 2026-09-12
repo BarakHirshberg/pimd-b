@@ -7,13 +7,14 @@
 #include <numeric>
 
 SoftLinkMove::SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, double _wl_step,
-                           unsigned int seed, const int start_rung) :
+                           unsigned int seed, const int _nsoft, const int start_rung) :
     sim(_sim),
     gammas(ladder),
     log_weights(ladder.size(), 0.0),
     histogram(ladder.size(), 0),
     wl_step(_wl_step),
     index(start_rung),
+    nsoft((_nsoft > 0 && _nsoft < _sim.natoms) ? _nsoft : _sim.natoms),
     soft_particle(0),
     gen(seed),
     n_trials(0),
@@ -25,6 +26,7 @@ SoftLinkMove::SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, 
         throw std::invalid_argument("soft_link_start_rung is outside the softened-link ladder!");
     }
     sim.soft_link_particle = soft_particle;
+    sim.soft_link_count = nsoft;
     sim.soft_link_gamma = gammas[index];
 }
 
@@ -37,6 +39,7 @@ double SoftLinkMove::gamma() const {
  */
 double SoftLinkMove::trialPotential(const int rung_index, const int particle_index) {
     sim.soft_link_particle = particle_index;
+    sim.soft_link_count = nsoft;
     sim.soft_link_gamma = gammas[rung_index];
     sim.bosonic_exchange->prepare();
     return sim.bosonic_exchange->effectivePotential();
@@ -69,8 +72,8 @@ void SoftLinkMove::attempt() {
             }
         }
 
-        // 2) move the softened link to another particle (uniform, hence symmetric). At gamma = 1 this
-        //    changes nothing and is always accepted.
+        // 2) move the softened block to another starting particle (uniform, hence symmetric). At
+        //    gamma = 1, and whenever the block covers every particle, this changes nothing.
         const double v_cur = sim.bosonic_exchange->effectivePotential();
         const int proposed_particle = pick_particle(gen);
         if (proposed_particle != soft_particle) {
@@ -107,6 +110,7 @@ void SoftLinkMove::attempt() {
     index = decision[0];
     soft_particle = decision[1];
     sim.soft_link_particle = soft_particle;
+    sim.soft_link_count = nsoft;
     sim.soft_link_gamma = gammas[index];
 
     sim.updateForces();

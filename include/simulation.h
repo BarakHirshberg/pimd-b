@@ -44,16 +44,26 @@ public:
     bool pbc;           // Enable periodic boundary conditions?
     bool winding_springs;  // Winding-sum (image-summed) spring weights instead of minimum-image springs
 
-    // Softened exterior link (expanded ensemble; see SoftLinkMove). The exterior spring LEAVING
-    // particle `soft_link_particle` has stiffness spring_constant / soft_link_gamma; every other
-    // exterior link, and every interior link, keeps spring_constant. gamma = 1 is the physical
-    // bosonic Hamiltonian, and only gamma = 1 samples are used for estimators.
+    // Softened exterior links (expanded ensemble; see SoftLinkMove). The exterior springs LEAVING
+    // the `soft_link_count` consecutive particles starting at `soft_link_particle` (cyclically) have
+    // stiffness spring_constant / soft_link_gamma; every other exterior link, and every interior
+    // link, keeps spring_constant. gamma = 1 is the physical bosonic Hamiltonian, and only gamma = 1
+    // samples are used for estimators.
+    //
+    // One softened link is not enough to open the permutation sector: a transposition of particles a
+    // and b replaces TWO exterior links (a -> b and b -> a), so softening only one of them leaves
+    // half of the barrier standing. A block of consecutive particles softens every link of the cycles
+    // that can form inside it; soft_link_count = natoms softens them all.
     int soft_link_particle;
+    int soft_link_count;
     double soft_link_gamma;
 
     /// Stiffness of the exterior spring leaving particle l.
     [[nodiscard]] double linkStiffness(int l) const {
-        return (l == soft_link_particle) ? spring_constant / soft_link_gamma : spring_constant;
+        if (soft_link_count >= natoms)
+            return spring_constant / soft_link_gamma;
+        const int offset = ((l - soft_link_particle) % natoms + natoms) % natoms;
+        return (offset < soft_link_count) ? spring_constant / soft_link_gamma : spring_constant;
     }
     int max_wind;          // Number of images per direction in the winding sums
 

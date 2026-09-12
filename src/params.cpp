@@ -99,6 +99,9 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
         throw std::invalid_argument(std::format("soft_link_freq ({}) must be positive!", f));
     sim["soft_link_ladder"] = reader.Get(Sections::SIMULATION, "soft_link_ladder", "1,2,4,8,16,32");
     sim["soft_link_wl_step"] = reader.GetReal(Sections::SIMULATION, "soft_link_wl_step", 0.5);
+    // Number of consecutive particles whose exterior link is softened; 0 (the default) means all of
+    // them. A single link leaves half of the transposition barrier standing and does not work.
+    sim["soft_link_count"] = reader.GetInteger(Sections::SIMULATION, "soft_link_count", 0);
     // Debugging aid: start (and, with a large soft_link_freq, stay) on a chosen rung of the ladder, so
     // that the forces at gamma != 1 can be checked against finite differences of the potential.
     sim["soft_link_start_rung"] = reader.GetInteger(Sections::SIMULATION, "soft_link_start_rung", 0);

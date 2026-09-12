@@ -13,10 +13,11 @@ class Simulation;
  * Motivation. For hard-core particles the free-energy barrier between permutation sectors is the spring
  * cost of bringing two beads as close as the pair potential allows, about 0.26 P T k_BT for 2D helium
  * (see docs/09 of the benchmark repository). Softening the exterior spring leaving one particle by a
- * factor gamma divides that barrier by gamma: the head of that ring can then reconnect to any first bead
- * at modest cost, and moving the softened link to the particle it just connected to advances the open
- * end through the fluid, building long and box-spanning cycles ONE LINK AT A TIME, as the worm algorithm
- * does in PIMC. It is a worm that is never opened, only softened.
+ * factor gamma divides that barrier by gamma. One softened link is not enough on its own: a transposition
+ * of two particles replaces TWO exterior links, so half of the barrier survives and no exchange appears
+ * (measured for N = 6 helium at 1 K and P = 32: p_exch = 0 up to gamma = 32). The softened region is
+ * therefore a BLOCK of nsoft consecutive particles, whose every internal closure is softened at once;
+ * nsoft = natoms softens the whole exterior spring network and is the default.
  *
  * Ensemble. The sampled distribution is
  *     pi(gamma, l*, R) ~ w(gamma) exp(-beta_P [U(R) + E_interior(R) + V_B(R; gamma, l*)]),
@@ -35,7 +36,7 @@ class Simulation;
 class SoftLinkMove {
 public:
     SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, double wl_step, unsigned int seed,
-                 int start_rung = 0);
+                 int nsoft, int start_rung = 0);
 
     /// Attempts the (gamma, l*) jumps; must be called by all ranks at the same point of the MD step.
     void attempt();
@@ -56,7 +57,8 @@ private:
     std::vector<long> histogram;     // visits per rung since the last refinement
     double wl_step;                  // Wang-Landau increment, halved as the histogram flattens
     int index;                       // current rung
-    int soft_particle;               // particle whose exterior link is softened
+    int nsoft;                       // number of consecutive particles whose links are softened
+    int soft_particle;               // first particle of the softened block
     std::mt19937 gen;
     long n_trials;
     long n_accepted;
