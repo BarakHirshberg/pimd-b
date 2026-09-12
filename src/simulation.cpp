@@ -32,6 +32,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
     getVariant(param_obj.sim["winding_springs"], winding_springs);
+    soft_link_particle = -1;  // no softened link until the move (if enabled) picks one
+    soft_link_gamma = 1.0;
     getVariant(param_obj.sim["max_wind"], max_wind);
 
     getVariant(param_obj.sys["temperature"], temperature);

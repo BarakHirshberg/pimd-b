@@ -42,6 +42,18 @@ public:
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
     bool winding_springs;  // Winding-sum (image-summed) spring weights instead of minimum-image springs
+
+    // Softened exterior link (expanded ensemble; see SoftLinkMove). The exterior spring LEAVING
+    // particle `soft_link_particle` has stiffness spring_constant / soft_link_gamma; every other
+    // exterior link, and every interior link, keeps spring_constant. gamma = 1 is the physical
+    // bosonic Hamiltonian, and only gamma = 1 samples are used for estimators.
+    int soft_link_particle;
+    double soft_link_gamma;
+
+    /// Stiffness of the exterior spring leaving particle l.
+    [[nodiscard]] double linkStiffness(int l) const {
+        return (l == soft_link_particle) ? spring_constant / soft_link_gamma : spring_constant;
+    }
     int max_wind;          // Number of images per direction in the winding sums
 
     // Helpers for one link with minimum-image separation diff[] (winding_springs only)
