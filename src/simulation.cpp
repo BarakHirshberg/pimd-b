@@ -739,7 +739,9 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
     }
 
     if (potential_name == "aziz") {
-        return std::make_unique<AzizPotential>();
+        const auto it = potential_options.find("v_cap");
+        const double v_cap = (it != potential_options.end()) ? std::get<double>(it->second) : 0.0;
+        return std::make_unique<AzizPotential>(v_cap);
     }
 
     return std::make_unique<Potential>();

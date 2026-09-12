@@ -1,6 +1,8 @@
 #include "potentials/aziz.h"
 
-AzizPotential::AzizPotential() {
+#include <cmath>
+
+AzizPotential::AzizPotential(double _v_cap) : v_cap(_v_cap) {
     // Aziz potential (HFDHE2) parameters, based on [J. Chem. Phys. 70, 4330-4342 (1979)].
     // The dimensional quantities (rm and epsilon) are in atomic units.
     rm = 5.60738;            // 5.60738 Bohr = 2.9673 Angstrom
@@ -13,6 +15,42 @@ AzizPotential::AzizPotential() {
     C10 = 0.1781;
 
     /// @todo Compute the tail correction here
+}
+
+/**
+ * @brief Aziz potential at the scaled distance x = r / rm, without the cap (atomic units).
+ */
+double AzizPotential::rawV(const double x) const {
+    const double Urep = A * exp(-alpha * x);
+    if (x > EPS && x < 0.01) {
+        return epsilon * Urep;
+    }
+    const double ix2 = 1.0 / (x * x);
+    const double ix6 = ix2 * ix2 * ix2;
+    const double ix8 = ix6 * ix2;
+    const double ix10 = ix8 * ix2;
+    return epsilon * (Urep - (C6 * ix6 + C8 * ix8 + C10 * ix10) * F(x));
+}
+
+/**
+ * @brief dV/dx of the uncapped Aziz potential at the scaled distance x = r / rm (atomic units).
+ */
+double AzizPotential::rawdVdx(const double x) const {
+    const double T1 = -A * alpha * exp(-alpha * x);
+    if (x > EPS && x < 0.01) {
+        return epsilon * T1;
+    }
+    const double ix = 1.0 / x;
+    const double ix2 = ix * ix;
+    const double ix6 = ix2 * ix2 * ix2;
+    const double ix7 = ix6 * ix;
+    const double ix8 = ix6 * ix2;
+    const double ix9 = ix8 * ix;
+    const double ix10 = ix8 * ix2;
+    const double ix11 = ix10 * ix;
+    const double T2 = (6.0 * C6 * ix7 + 8.0 * C8 * ix9 + 10.0 * C10 * ix11) * F(x);
+    const double T3 = -(C6 * ix6 + C8 * ix8 + C10 * ix10) * dF(x);
+    return epsilon * (T1 + T2 + T3);
 }
 
 double AzizPotential::V(const dVec& x) {
@@ -34,20 +72,8 @@ double AzizPotential::V(const dVec& x) {
         // Scale the distance relative to the Aziz equilibrium distance
         const double r_scaled = x.norm(ptcl_idx) / rm;
 
-        const double Urep = A * exp(-alpha * r_scaled);
-
-        if (r_scaled > EPS && r_scaled < 0.01) {
-            // If the distance is small, the 6-8-10 terms are negligible
-            // and the repulsion is dominated by "Urep"
-            potential += epsilon * Urep;
-        } else {
-            const double ix2 = 1.0 / (r_scaled * r_scaled);
-            const double ix6 = ix2 * ix2 * ix2;
-            const double ix8 = ix6 * ix2;
-            const double ix10 = ix8 * ix2;
-            const double Uatt = -(C6 * ix6 + C8 * ix8 + C10 * ix10) * F(r_scaled);
-            potential += epsilon * (Urep + Uatt);
-        }
+        const double raw = rawV(r_scaled);
+        potential += (v_cap > 0.0) ? v_cap * std::tanh(raw / v_cap) : raw;
     }
 
     return potential;
@@ -70,27 +96,12 @@ dVec AzizPotential::gradV(const dVec& x) {
         */
         const double norm = x.norm(pair_idx);
         const double r_scaled = norm / rm;
-        const double T1 = -A * alpha * exp(-alpha * r_scaled);
 
-        double grad_result;
-
-        // Do not allow self-interactions
-        if (r_scaled > EPS && r_scaled < 0.01)
-            grad_result = T1 * (epsilon / rm);
-        else {
-            const double ix = 1.0 / r_scaled;
-            const double ix2 = ix * ix;
-            const double ix6 = ix2 * ix2 * ix2;
-            const double ix7 = ix6 * ix;
-            const double ix8 = ix6 * ix2;
-            const double ix9 = ix8 * ix;
-            const double ix10 = ix8 * ix2;
-            const double ix11 = ix10 * ix;
-
-            const double T2 = (6.0 * C6 * ix7 + 8.0 * C8 * ix9 + 10.0 * C10 * ix11) * F(r_scaled);
-            const double T3 = -(C6 * ix6 + C8 * ix8 + C10 * ix10) * dF(r_scaled);
-
-            grad_result = (epsilon / rm) * (T1 + T2 + T3);
+        // dV/dr of the (possibly capped) potential: d/dr [v_cap tanh(V/v_cap)] = sech^2(V/v_cap) dV/dr
+        double grad_result = rawdVdx(r_scaled) / rm;
+        if (v_cap > 0.0) {
+            const double c = std::cosh(rawV(r_scaled) / v_cap);
+            grad_result /= (c * c);
         }
 
         // The gradient multiplies the distance vector.

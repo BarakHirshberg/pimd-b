@@ -287,6 +287,12 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
             "length", reader.Get(Sections::INT_POTENTIAL, "location", "1.0 angstrom"));
     } else if (interaction_name == "dipole") {
         interaction_pot["strength"] = reader.GetReal(Sections::INT_POTENTIAL, "strength", 1.0);
+    } else if (interaction_name == "aziz") {
+        // Optional smooth cap on the repulsive core (see AzizPotential); 0 = the true Aziz potential
+        interaction_pot["v_cap"] = getQuantity(
+            "energy", reader.Get(Sections::INT_POTENTIAL, "v_cap", "0.0 kelvin"));
+        if (std::get<double>(interaction_pot["v_cap"]) < 0.0)
+            throw std::invalid_argument("v_cap must not be negative!");
     }
 
     /****** External potential ******/
