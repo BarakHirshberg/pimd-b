@@ -272,7 +272,7 @@ void Simulation::run() {
         }
 
         // Expanded ensemble over the stiffness of one exterior link (bosonic simulations, if enabled)
-        if (soft_link && step % soft_link_freq == 0) {
+        if (soft_link && step > 0 && step % soft_link_freq == 0) {
             soft_link_move->attempt();
         }
 
@@ -875,7 +875,9 @@ void Simulation::initializeMoves(const VariantMap& sim_params) {
             if (comma == std::string::npos) break;
             pos = comma + 1;
         }
-        soft_link_move = std::make_unique<SoftLinkMove>(*this, ladder, wl_step, seed);
+        int start_rung = 0;
+        getVariant(sim_params.at("soft_link_start_rung"), start_rung);
+        soft_link_move = std::make_unique<SoftLinkMove>(*this, ladder, wl_step, seed, start_rung);
     }
 
     if (exchange_move) {

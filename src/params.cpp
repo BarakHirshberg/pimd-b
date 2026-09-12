@@ -99,6 +99,9 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
         throw std::invalid_argument(std::format("soft_link_freq ({}) must be positive!", f));
     sim["soft_link_ladder"] = reader.Get(Sections::SIMULATION, "soft_link_ladder", "1,2,4,8,16,32");
     sim["soft_link_wl_step"] = reader.GetReal(Sections::SIMULATION, "soft_link_wl_step", 0.5);
+    // Debugging aid: start (and, with a large soft_link_freq, stay) on a chosen rung of the ladder, so
+    // that the forces at gamma != 1 can be checked against finite differences of the potential.
+    sim["soft_link_start_rung"] = reader.GetInteger(Sections::SIMULATION, "soft_link_start_rung", 0);
     sim["soft_link_seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION,
         "soft_link_seed", reader.Get(Sections::SIMULATION, "seed", "1234"))));
     if (soft_link && !bosonic)

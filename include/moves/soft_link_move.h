@@ -34,7 +34,8 @@ class Simulation;
  */
 class SoftLinkMove {
 public:
-    SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, double wl_step, unsigned int seed);
+    SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, double wl_step, unsigned int seed,
+                 int start_rung = 0);
 
     /// Attempts the (gamma, l*) jumps; must be called by all ranks at the same point of the MD step.
     void attempt();

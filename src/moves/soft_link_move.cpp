@@ -7,19 +7,22 @@
 #include <numeric>
 
 SoftLinkMove::SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, double _wl_step,
-                           unsigned int seed) :
+                           unsigned int seed, const int start_rung) :
     sim(_sim),
     gammas(ladder),
     log_weights(ladder.size(), 0.0),
     histogram(ladder.size(), 0),
     wl_step(_wl_step),
-    index(0),
+    index(start_rung),
     soft_particle(0),
     gen(seed),
     n_trials(0),
     n_accepted(0) {
     if (gammas.empty() || gammas.front() != 1.0) {
         throw std::invalid_argument("The softened-link ladder must start at gamma = 1 (the physical state)!");
+    }
+    if (index < 0 || index >= static_cast<int>(gammas.size())) {
+        throw std::invalid_argument("soft_link_start_rung is outside the softened-link ladder!");
     }
     sim.soft_link_particle = soft_particle;
     sim.soft_link_gamma = gammas[index];
