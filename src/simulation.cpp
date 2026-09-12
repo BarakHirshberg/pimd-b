@@ -428,10 +428,11 @@ void Simulation::updateNeighboringCoordinates() {
 /**
  * @brief ln of the winding-summed weight of one link, product over Cartesian components.
  */
-double Simulation::linkLogWeight(const double diff[NDIM]) const {
+double Simulation::linkLogWeight(const double diff[NDIM], const double stiffness) const {
+    const double bhk = (stiffness < 0.0) ? beta_half_k : thermo_beta * 0.5 * stiffness;
     double result = 0.0;
     for (int axis = 0; axis < NDIM; ++axis) {
-        result += WindingProbability(diff[axis], max_wind, beta_half_k, size).logWeight();
+        result += WindingProbability(diff[axis], max_wind, bhk, size).logWeight();
     }
     return result;
 }
@@ -439,21 +440,24 @@ double Simulation::linkLogWeight(const double diff[NDIM]) const {
 /**
  * @brief Expectation of the spring energy (k/2)|d + wL|^2 of one link over its winding distribution.
  */
-double Simulation::linkEnergyExpectation(const double diff[NDIM]) const {
+double Simulation::linkEnergyExpectation(const double diff[NDIM], const double stiffness) const {
+    const double k = (stiffness < 0.0) ? spring_constant : stiffness;
+    const double bhk = thermo_beta * 0.5 * k;
     double result = 0.0;
     for (int axis = 0; axis < NDIM; ++axis) {
-        result += WindingProbability(diff[axis], max_wind, beta_half_k, size).diffSquaredExpectation();
+        result += WindingProbability(diff[axis], max_wind, bhk, size).diffSquaredExpectation();
     }
-    return 0.5 * spring_constant * result;
+    return 0.5 * k * result;
 }
 
 /**
  * @brief d + L<w> per component: the force on the bead at the origin of d is k (d + L<w>),
  * since -d/dx [-(1/beta_P) ln mu] = k sum_w p_w (d + wL).
  */
-void Simulation::linkMeanSeparation(const double diff[NDIM], double out[NDIM]) const {
+void Simulation::linkMeanSeparation(const double diff[NDIM], double out[NDIM], const double stiffness) const {
+    const double bhk = (stiffness < 0.0) ? beta_half_k : thermo_beta * 0.5 * stiffness;
     for (int axis = 0; axis < NDIM; ++axis) {
-        out[axis] = diff[axis] + size * WindingProbability(diff[axis], max_wind, beta_half_k, size).expectation();
+        out[axis] = diff[axis] + size * WindingProbability(diff[axis], max_wind, bhk, size).expectation();
     }
 }
 

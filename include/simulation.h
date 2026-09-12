@@ -67,10 +67,12 @@ public:
     }
     int max_wind;          // Number of images per direction in the winding sums
 
-    // Helpers for one link with minimum-image separation diff[] (winding_springs only)
-    double linkLogWeight(const double diff[NDIM]) const;          // ln prod_axis mu(diff)
-    double linkEnergyExpectation(const double diff[NDIM]) const;  // (k/2) <|diff + wL|^2>
-    void linkMeanSeparation(const double diff[NDIM], double out[NDIM]) const;  // diff + L <w>
+    // Helpers for one link with minimum-image separation diff[] (winding_springs only). The
+    // stiffness defaults to spring_constant; exterior links must pass linkStiffness(l), which
+    // differs from it while the softened-link expanded ensemble is away from gamma = 1.
+    double linkLogWeight(const double diff[NDIM], double stiffness = -1.0) const;
+    double linkEnergyExpectation(const double diff[NDIM], double stiffness = -1.0) const;
+    void linkMeanSeparation(const double diff[NDIM], double out[NDIM], double stiffness = -1.0) const;
     bool nmthermostat;  // Couple thermostat to normal modes
 
     int    n_perm_samples; // Permutations sampled per measurement (permutation/winding observables)

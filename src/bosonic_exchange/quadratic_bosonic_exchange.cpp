@@ -44,20 +44,23 @@ void BosonicExchange::evaluateCycleEnergies() {
         // Rigorous periodic weights: the "energy" of a link is -(1/beta_P) ln mu(d) (winding sum over
         // images), and its spring-energy expectation (k/2)<|d + wL|^2> is carried alongside in A_kn for
         // the primitive kinetic estimator. JCP 163, 024101 (2025).
-        auto link_e = [&](const dVec& xa, int a, const dVec& xb, int b) {
+        // Every link carries the stiffness of the particle it LEAVES, exactly as in the plain branch
+        // below; it differs from spring_constant only while the softened-link ensemble is away from
+        // gamma = 1.
+        auto link_e = [&](const dVec& xa, int a, const dVec& xb, int b, int leaves) {
             double d[NDIM];
             getBeadsSeparation(xa, a, xb, b, d);
-            return -sim.linkLogWeight(d) / beta;
+            return -sim.linkLogWeight(d, sim.linkStiffness(leaves)) / beta;
         };
-        auto link_a = [&](const dVec& xa, int a, const dVec& xb, int b) {
+        auto link_a = [&](const dVec& xa, int a, const dVec& xb, int b, int leaves) {
             double d[NDIM];
             getBeadsSeparation(xa, a, xb, b, d);
-            return sim.linkEnergyExpectation(d);
+            return sim.linkEnergyExpectation(d, sim.linkStiffness(leaves));
         };
 
         for (int i = 0; i < nbosons; i++) {
-            temp_nbosons_array[i] = link_e(x_first_bead, i, x_last_bead, i);
-            a_temp_nbosons_array[i] = link_a(x_first_bead, i, x_last_bead, i);
+            temp_nbosons_array[i] = link_e(x_first_bead, i, x_last_bead, i, i);
+            a_temp_nbosons_array[i] = link_a(x_first_bead, i, x_last_bead, i, i);
         }
 
         for (int v = 0; v < nbosons; v++) {
@@ -66,13 +69,13 @@ void BosonicExchange::evaluateCycleEnergies() {
 
             for (int u = v - 1; u >= 0; u--) {
                 const double e_val = getEnk(v + 1, v - u)
-                    + link_e(x_last_bead, u, x_first_bead, u + 1)   // connect u to u+1
-                    - link_e(x_first_bead, u + 1, x_last_bead, v)   // break cycle [u+1,v]
-                    + link_e(x_first_bead, u, x_last_bead, v);      // close cycle from v to u
+                    + link_e(x_last_bead, u, x_first_bead, u + 1, u)   // connect u to u+1
+                    - link_e(x_first_bead, u + 1, x_last_bead, v, v)   // break cycle [u+1,v]
+                    + link_e(x_first_bead, u, x_last_bead, v, v);      // close cycle from v to u
                 const double a_val = getAnk(v + 1, v - u)
-                    + link_a(x_last_bead, u, x_first_bead, u + 1)
-                    - link_a(x_first_bead, u + 1, x_last_bead, v)
-                    + link_a(x_first_bead, u, x_last_bead, v);
+                    + link_a(x_last_bead, u, x_first_bead, u + 1, u)
+                    - link_a(x_first_bead, u + 1, x_last_bead, v, v)
+                    + link_a(x_first_bead, u, x_last_bead, v, v);
 
                 setEnk(v + 1, v - u + 1, e_val);
                 setAnk(v + 1, v - u + 1, a_val);
@@ -222,7 +225,7 @@ void BosonicExchange::springForceLastBead(dVec& f) {
 
             double prob = connection_probabilities[nbosons * l + next_l];
 
-            if (sim.winding_springs) sim.linkMeanSeparation(diff_next, diff_next);
+            if (sim.winding_springs) sim.linkMeanSeparation(diff_next, diff_next, sim.linkStiffness(l));
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_next[axis] * sim.linkStiffness(l);
@@ -254,7 +257,8 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
 
             double prob = connection_probabilities[nbosons * prev_l + l];
 
-            if (sim.winding_springs) sim.linkMeanSeparation(diff_prev, diff_prev);
+            if (sim.winding_springs)
+                sim.linkMeanSeparation(diff_prev, diff_prev, sim.linkStiffness(prev_l));
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_prev[axis] * sim.linkStiffness(prev_l);
