@@ -7,7 +7,8 @@
 #include <numeric>
 
 SoftLinkMove::SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, double _wl_step,
-                           unsigned int seed, const int _nsoft, const int start_rung) :
+                           unsigned int seed, const int _nsoft, const int start_rung,
+                           const long _freeze_after) :
     sim(_sim),
     gammas(ladder),
     log_weights(ladder.size(), 0.0),
@@ -16,6 +17,8 @@ SoftLinkMove::SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, 
     index(start_rung),
     nsoft((_nsoft > 0 && _nsoft < _sim.natoms) ? _nsoft : _sim.natoms),
     soft_particle(0),
+    freeze_after(_freeze_after),
+    visits(ladder.size(), 0),
     gen(seed),
     n_trials(0),
     n_accepted(0) {
@@ -86,13 +89,19 @@ void SoftLinkMove::attempt() {
             }
         }
 
-        // Wang-Landau update of the ladder weights (efficiency only; the gamma = 1 stratum is exact
-        // whatever the weights). The increment is halved once every rung has been visited often enough.
+        // Wang-Landau update of the ladder weights. Note that a LIVE increment penalises the rung the
+        // walker is standing on, which shortens residence at gamma = 1 and pushes the chain out of
+        // detailed balance; the gamma = 1 stratum is only exact once the weights stop moving. Set
+        // soft_link_wl_freeze to learn the weights for that many attempts and then hold them fixed.
+        visits[index] += 1;
+        if (freeze_after > 0 && n_trials >= freeze_after) {
+            wl_step = 0.0;
+        }
         log_weights[index] -= wl_step;
         histogram[index] += 1;
         const long total = std::accumulate(histogram.begin(), histogram.end(), 0L);
         const long lowest = *std::min_element(histogram.begin(), histogram.end());
-        if (total > 200L * static_cast<long>(gammas.size())
+        if (wl_step > 0.0 && total > 200L * static_cast<long>(gammas.size())
             && lowest > (8L * total) / (10L * static_cast<long>(gammas.size()))) {
             wl_step *= 0.5;
             std::fill(histogram.begin(), histogram.end(), 0L);
@@ -115,6 +124,15 @@ void SoftLinkMove::attempt() {
 
     sim.updateForces();
     sim.configurationChanged();
+}
+
+double SoftLinkMove::flatness() const {
+    const long total = std::accumulate(visits.begin(), visits.end(), 0L);
+    if (total == 0) {
+        return 0.0;
+    }
+    const long lowest = *std::min_element(visits.begin(), visits.end());
+    return static_cast<double>(lowest) * static_cast<double>(gammas.size()) / static_cast<double>(total);
 }
 
 double SoftLinkMove::acceptanceRatio() const {

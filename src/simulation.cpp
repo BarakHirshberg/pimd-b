@@ -883,7 +883,10 @@ void Simulation::initializeMoves(const VariantMap& sim_params) {
         int start_rung = 0, nsoft = 0;
         getVariant(sim_params.at("soft_link_start_rung"), start_rung);
         getVariant(sim_params.at("soft_link_count"), nsoft);
-        soft_link_move = std::make_unique<SoftLinkMove>(*this, ladder, wl_step, seed, nsoft, start_rung);
+        int wl_freeze = 0;
+        getVariant(sim_params.at("soft_link_wl_freeze"), wl_freeze);
+        soft_link_move = std::make_unique<SoftLinkMove>(*this, ladder, wl_step, seed, nsoft, start_rung,
+                                                        static_cast<long>(wl_freeze));
     }
 
     if (exchange_move) {

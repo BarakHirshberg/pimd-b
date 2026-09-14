@@ -36,7 +36,7 @@ class Simulation;
 class SoftLinkMove {
 public:
     SoftLinkMove(Simulation& _sim, const std::vector<double>& ladder, double wl_step, unsigned int seed,
-                 int nsoft, int start_rung = 0);
+                 int nsoft, int start_rung = 0, long freeze_after = 0);
 
     /// Attempts the (gamma, l*) jumps; must be called by all ranks at the same point of the MD step.
     void attempt();
@@ -46,6 +46,14 @@ public:
     [[nodiscard]] int rung() const { return index; }
     [[nodiscard]] int particle() const { return soft_particle; }
     [[nodiscard]] const std::vector<double>& weights() const { return log_weights; }
+
+    /// Current Wang-Landau increment. Zero once the weights are frozen, which is the only regime in
+    /// which the gamma move satisfies detailed balance and the gamma = 1 stratum is exact.
+    [[nodiscard]] double wlStep() const { return wl_step; }
+
+    /// Flatness of the visit histogram: least-visited rung divided by the uniform expectation. One
+    /// is perfectly flat, zero means a rung has never been reached.
+    [[nodiscard]] double flatness() const;
 
 private:
     /// Effective potential with a trial (gamma, l*), restoring the previous state afterwards.
@@ -59,6 +67,8 @@ private:
     int index;                       // current rung
     int nsoft;                       // number of consecutive particles whose links are softened
     int soft_particle;               // first particle of the softened block
+    long freeze_after;               // attempts after which wl_step is set to zero (0 = never)
+    std::vector<long> visits;        // visits per rung since the start, for the flatness report
     std::mt19937 gen;
     long n_trials;
     long n_accepted;
