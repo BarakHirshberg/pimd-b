@@ -4,7 +4,7 @@
 
 SoftLinkObservable::SoftLinkObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     Observable(_sim, _freq, _out_unit) {
-    initialize({ "gamma", "soft_particle", "soft_acc", "wl_step", "wl_flat" });
+    initialize({ "gamma", "soft_particle", "soft_acc" });
 }
 
 void SoftLinkObservable::calculate() {
@@ -20,8 +20,4 @@ void SoftLinkObservable::calculate() {
     quantities["gamma"] = sim.soft_link_move->gamma();
     quantities["soft_particle"] = static_cast<double>(sim.soft_link_move->particle());
     quantities["soft_acc"] = sim.soft_link_move->acceptanceRatio();
-    // wl_step is the live Wang-Landau increment: zero means the weights are frozen and the gamma
-    // move is in detailed balance. wl_flat is the least-visited rung over the uniform expectation.
-    quantities["wl_step"] = sim.soft_link_move->wlStep();
-    quantities["wl_flat"] = sim.soft_link_move->flatness();
 }
