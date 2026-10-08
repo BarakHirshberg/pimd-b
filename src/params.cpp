@@ -99,6 +99,16 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
         throw std::invalid_argument(std::format("soft_link_freq ({}) must be positive!", f));
     sim["soft_link_ladder"] = reader.Get(Sections::SIMULATION, "soft_link_ladder", "1,2,4,8,16,32");
     sim["soft_link_wl_step"] = reader.GetReal(Sections::SIMULATION, "soft_link_wl_step", 0.5);
+    // Attempts after which the Wang-Landau increment is set to zero and the ladder weights are held
+    // fixed. Zero (the default) keeps the increment alive for the whole run, which is how the move
+    // has always behaved. A live increment penalises the rung the walker is on, so it shortens the
+    // residence at gamma = 1 and the gamma move is not in detailed balance with any fixed
+    // distribution: conditioning averages on gamma = 1 is then exact only in the limit of a vanishing
+    // increment. Learning the weights for a while and then freezing them removes that objection.
+    sim["soft_link_wl_freeze"] = static_cast<int>(reader.GetInteger(Sections::SIMULATION,
+        "soft_link_wl_freeze", 0));
+    if (int fz = std::get<int>(sim["soft_link_wl_freeze"]); fz < 0)
+        throw std::invalid_argument(std::format("soft_link_wl_freeze ({}) must not be negative!", fz));
     // Number of consecutive particles whose exterior link is softened; 0 (the default) means all of
     // them. A single link leaves half of the transposition barrier standing and does not work.
     sim["soft_link_count"] = reader.GetInteger(Sections::SIMULATION, "soft_link_count", 0);
