@@ -966,12 +966,26 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
  */
 void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name) {
     if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
+        // Optional stride of the state files; 0 means the observable frequency.
+        long freq = sfreq;
+        if (auto it = sim_params.find("states_freq"); it != sim_params.end()) {
+            const long requested = std::stol(it->second);
+            if (requested < 0)
+                throw std::invalid_argument(std::format("states_freq ({}) must be non-negative!", requested));
+            if (requested > 0) {
+                if (steps % requested != 0)
+                    throw std::invalid_argument(std::format(
+                        "states_freq ({}) must divide the number of steps ({}) so that the last frame is written!",
+                        requested, steps));
+                freq = requested;
+            }
+        }
         if (units == "on" || units == "true" || units == "none") {
             // In the case of "none", it is expected that the State object quantities will not have units,
             // and therefore providing "atomic_unit" as the units in this case is simply a placeholder.
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, "atomic_unit"));
+            states.push_back(StateFactory::createQuantity(state_name, *this, static_cast<int>(freq), "atomic_unit"));
         } else {
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, units));
+            states.push_back(StateFactory::createQuantity(state_name, *this, static_cast<int>(freq), units));
         }
     }
 }

@@ -354,6 +354,10 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     states["velocities"] = reader.Get(Sections::OUTPUT, "velocities", "off");
     states["forces"] = reader.Get(Sections::OUTPUT, "forces", "off");
     states["labels"] = reader.Get(Sections::OUTPUT, "labels", "off");
+    // Stride of the state files (positions, velocities, forces, labels) in MD steps. 0 (default) means
+    // the observable frequency sfreq. A coarse stride makes a long run restartable from its last frame
+    // without writing a trajectory: the last step is forced to be a multiple of it.
+    states["states_freq"] = reader.Get(Sections::OUTPUT, "states_freq", "0");
 
     /****** Observables ******/
 
