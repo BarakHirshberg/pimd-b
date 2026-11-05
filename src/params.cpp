@@ -38,6 +38,13 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // Bosonic or distinguishable simulation?
     bool bosonic = reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
     sim["bosonic"] = bosonic;
+    // Exact exchange algorithm: "quadratic" (Feldman-Hirshberg recursion over consecutive-label cycles,
+    // O(N^2)) or "ladder" (the same composition sum on the ladder cycle representative, O(N); see
+    // LadderRecursion). Both are exact; the naive factorial algorithm is a compile-time choice.
+    std::string bosonic_algorithm = reader.GetString(Sections::SIMULATION, "bosonic_algorithm", "quadratic");
+    if (bosonic_algorithm != "quadratic" && bosonic_algorithm != "ladder")
+        throw std::invalid_argument(std::format("The bosonic algorithm ({}) must be 'quadratic' or 'ladder'!", bosonic_algorithm));
+    sim["bosonic_algorithm"] = bosonic_algorithm;
     // Fix the center of mass?
     sim["fixcom"] = reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
     // Enable periodic boundary conditions?

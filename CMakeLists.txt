@@ -52,3 +52,16 @@ set(FACTORIAL_BOSONIC_ALGORITHM false CACHE BOOL "Set to true to compile with th
 if (FACTORIAL_BOSONIC_ALGORITHM)
     add_compile_definitions(FACTORIAL_BOSONIC_ALGORITHM)
 endif()
+
+# Unit tests of the ladder (linear-time) bosonic exchange: the recursion against brute force, and
+# the forces of the full exchange classes against finite differences (MPI driver).
+set(BUILD_LADDER_TESTS false CACHE BOOL "Build the ladder exchange unit tests")
+if (BUILD_LADDER_TESTS)
+    add_executable(ladder_recursion_test tests/ladder_recursion_test.cpp)
+    set_property(TARGET ladder_recursion_test PROPERTY CXX_STANDARD 20)
+    set(PIMDB_LIB_SRC ${PIMDB_SRC})
+    list(FILTER PIMDB_LIB_SRC EXCLUDE REGEX "src/pimdb.cpp$")
+    add_executable(ladder_force_test tests/ladder_force_test.cpp ${PIMDB_LIB_SRC} ${PIMDB_LIBS})
+    target_link_libraries(ladder_force_test ${MPI_C_LIBRARIES})
+    set_property(TARGET ladder_force_test PROPERTY CXX_STANDARD 20)
+endif()

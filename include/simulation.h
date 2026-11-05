@@ -40,6 +40,7 @@ public:
     long steps;         // Total number of MD steps
 
     bool bosonic;       // Is the simulation bosonic?
+    std::string bosonic_algorithm;  // "quadratic" or "ladder" (see LadderBosonicExchange)
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
     bool winding_springs;  // Winding-sum (image-summed) spring weights instead of minimum-image springs

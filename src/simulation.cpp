@@ -29,6 +29,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     threshold *= steps;  // Threshold in terms of steps
 
     getVariant(param_obj.sim["bosonic"], bosonic);
+    bosonic_algorithm = std::get<std::string>(param_obj.sim["bosonic_algorithm"]);
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
     getVariant(param_obj.sim["winding_springs"], winding_springs);
@@ -622,7 +623,7 @@ void Simulation::printReport(double wall_time) const {
 
     if (bosonic) {
         report_file << formattedReportLine("Statistics", "Bosonic");
-        std::string bosonic_alg_name = "Feldman-Hirshberg";
+        std::string bosonic_alg_name = (bosonic_algorithm == "ladder") ? "Ladder (linear)" : "Feldman-Hirshberg";
 
 #if FACTORIAL_BOSONIC_ALGORITHM
         bosonic_alg_name = "Naive";
@@ -816,7 +817,11 @@ void Simulation::initializeExchangeAlgorithm() {
 #if FACTORIAL_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<FactorialBosonicExchange>(*this);
 #else
-        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
+        if (bosonic_algorithm == "ladder") {
+            bosonic_exchange = std::make_unique<LadderBosonicExchange>(*this);
+        } else {
+            bosonic_exchange = std::make_unique<BosonicExchange>(*this);
+        }
 #endif
     }
 }
