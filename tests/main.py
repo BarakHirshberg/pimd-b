@@ -75,6 +75,9 @@ def run_simulation(executable_dir, input_file):
 
 
 def compare_arrays(array1, array2):
+    # Broadcasting must not hide missing frames/components.
+    if np.shape(array1) != np.shape(array2):
+        return False, "shape"
     # Check if the arrays are equal within a tolerance
     if np.allclose(array1, array2, rtol=1e-5):
         return True, None  # Arrays are equal
@@ -90,6 +93,9 @@ def compare_output(actual_output, expected_output):
     data_actual = read_data(actual_output)
     data_expected = read_data(expected_output)
     
+    if set(data_actual) != set(data_expected):
+        raise AssertionError("Test failed: Observable columns do not match.")
+
     # Check if the number of steps match
     if len(data_actual['step']) != len(data_expected['step']):
         raise AssertionError("Test failed: Number of steps do not match.")

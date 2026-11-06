@@ -29,3 +29,8 @@ ladder object's memory scaling separately.
 Scientific validation lives in hebench's ideal_validation module. Compare
 physical averages with exact references: ladder and quadratic potentials and
 forces intentionally differ at fixed coordinates.
+
+The runner also rejects missing observable columns and array-shape differences;
+NumPy broadcasting cannot turn missing trajectory frames into a passing result.
+Run `python -m unittest discover -s tests -p test_regression_runner.py` to check
+those failure cases and compatibility with the saved fixtures. CI runs it too.

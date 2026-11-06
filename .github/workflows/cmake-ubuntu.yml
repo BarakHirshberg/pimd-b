@@ -81,6 +81,9 @@ jobs:
           cache: 'pip'
       - run: pip install -r ${{github.workspace}}/tests/requirements.txt
 
+      - name: Check regression runner validation
+        run: python -m unittest discover -s tests -p test_regression_runner.py
+
       - name: Run regression tests
         run: |
           export OPENMPI_BIN=/home/${USER}/.openmpi/bin/
