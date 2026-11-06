@@ -65,3 +65,27 @@ if (BUILD_LADDER_TESTS)
     target_link_libraries(ladder_force_test ${MPI_C_LIBRARIES})
     set_property(TARGET ladder_force_test PROPERTY CXX_STANDARD 20)
 endif()
+
+# Register deterministic checks; all MPI fixtures run in separate build directories.
+if (BUILD_LADDER_TESTS)
+    enable_testing()
+    add_test(NAME ladder_recursion COMMAND ladder_recursion_test)
+    foreach(wind false true)
+        set(case_dir "${CMAKE_CURRENT_BINARY_DIR}/test-force-${wind}")
+        file(MAKE_DIRECTORY "${case_dir}")
+        add_test(NAME ladder_force_${wind}
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:ladder_force_test>
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/cases/ladder_force/ladder_force_wind_${wind}.ini"
+                ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(ladder_force_${wind} PROPERTIES
+            WORKING_DIRECTORY "${case_dir}" PROCESSORS 4 TIMEOUT 300)
+    endforeach()
+endif()
+
+# Optional compute-node microbenchmark; not a scientific acceptance test.
+if (BUILD_LADDER_TESTS)
+    add_executable(exchange_benchmark tests/exchange_benchmark.cpp ${PIMDB_LIB_SRC} ${PIMDB_LIBS})
+    target_link_libraries(exchange_benchmark ${MPI_C_LIBRARIES})
+    set_property(TARGET exchange_benchmark PROPERTY CXX_STANDARD 20)
+endif()

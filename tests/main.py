@@ -287,7 +287,14 @@ def run_tests(executable_dir, tests_dir, is_factorial_bosonic):
     # If factorial_bosonic is False, iterate over any test case whose folder does not have the prefix "bosonic_factorial".
     
     excluded_bosonic_prefix = "bosonic_quadratic" if is_factorial_bosonic else "bosonic_factorial"
-    test_cases = [test_case for test_case in tests_dir.iterdir() if test_case.is_dir() and not test_case.name.startswith(excluded_bosonic_prefix)]
+    test_cases = sorted(
+        case for case in tests_dir.iterdir()
+        if case.is_dir() and not case.name.startswith(excluded_bosonic_prefix)
+        and (case / f"{case.name}.ini").is_file()
+        and (case / out_filename).is_file()
+    )
+    if not test_cases:
+        raise RuntimeError("No complete regression cases found")
     
     # Iterate over each test case folder
     for test_case in test_cases:
