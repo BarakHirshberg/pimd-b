@@ -78,6 +78,13 @@ public:
 
     /// Restrict state output and cumulative cycles to frozen-weight gamma=1 samples; default off.
     bool physical_output_only;
+    /// Opt-in synchronized pair-force profiling. Does not disable or alter physical forces.
+    bool profile_pair_forces;
+    /// Only count calls made inside run(), excluding initialization.
+    bool pair_profile_active = false;
+    /// Rank-local elapsed synchronized pair-force sections; rank zero reports the decomposition.
+    mutable double pair_profile_seconds = 0.0;
+    mutable long pair_profile_calls = 0;
     /// Whether the current configuration belongs to the fixed-weight physical ensemble.
     [[nodiscard]] bool physicalOutputEligible() const;
     int    n_perm_samples; // Permutations sampled per measurement (permutation/winding observables)

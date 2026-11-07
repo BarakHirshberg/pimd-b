@@ -68,6 +68,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     getVariant(param_obj.sim["n_perm_samples"], n_perm_samples);
     getVariant(param_obj.sim["physical_output_only"], physical_output_only);
+    getVariant(param_obj.sim["profile_pair_forces"], profile_pair_forces);
     getVariant(param_obj.sim["rdf_bins"], rdf_bins);
     getVariant(param_obj.sim["rdf_rmax"], rdf_rmax);
     getVariant(param_obj.sim["gsf_alpha"], gsf_alpha);
@@ -248,6 +249,10 @@ void Simulation::run() {
         state->initialize();
     }
 
+    pair_profile_seconds = 0.0;
+    pair_profile_calls = 0;
+    pair_profile_active = profile_pair_forces;
+
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
         setStep(step);
@@ -329,6 +334,13 @@ void Simulation::run() {
     const double sim_exec_time_end = MPI_Wtime();
 
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
+    pair_profile_active = false;
+    if (profile_pair_forces && this_bead == 0) {
+        std::ofstream timing(std::format("{}/pair_timing.json", Output::FOLDER_NAME));
+        timing << std::format("{{\n  \"total_seconds\": {:.17g},\n  \"pair_seconds\": {:.17g},\n  \"excluding_pair_seconds\": {:.17g},\n  \"pair_calls\": {},\n  \"steps_executed\": {}\n}}\n",
+                              wall_time, pair_profile_seconds, wall_time - pair_profile_seconds,
+                              pair_profile_calls, steps + 1);
+    }
 
     printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
 
@@ -518,6 +530,12 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
     physical_force_arr = (-1.0) * ext_potential->gradV(coord);
 
     if (int_pot_cutoff != 0.0) {
+        double pair_start = 0.0;
+        if (pair_profile_active) {
+            // Do not charge preceding exchange/propagation imbalance to pair forces.
+            MPI_Barrier(MPI_COMM_WORLD);
+            pair_start = MPI_Wtime();
+        }
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 // Get the vector distance between the two particles.
@@ -538,6 +556,12 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
                     }
                 }
             }
+        }
+        if (pair_profile_active) {
+            // Include waiting for the slowest bead's pair forces in the excluded section.
+            MPI_Barrier(MPI_COMM_WORLD);
+            pair_profile_seconds += MPI_Wtime() - pair_start;
+            ++pair_profile_calls;
         }
     }
 }
