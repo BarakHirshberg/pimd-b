@@ -76,6 +76,10 @@ public:
     void linkMeanSeparation(const double diff[NDIM], double out[NDIM], double stiffness = -1.0) const;
     bool nmthermostat;  // Couple thermostat to normal modes
 
+    /// Restrict state output and cumulative cycles to frozen-weight gamma=1 samples; default off.
+    bool physical_output_only;
+    /// Whether the current configuration belongs to the fixed-weight physical ensemble.
+    [[nodiscard]] bool physicalOutputEligible() const;
     int    n_perm_samples; // Permutations sampled per measurement (permutation/winding observables)
     int    rdf_bins;       // Number of bins of the radial distribution function
     double rdf_rmax;       // Maximum distance of the radial distribution function (<= 0: half the box)

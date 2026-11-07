@@ -385,6 +385,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     observables["timeshift"] = reader.Get(Sections::OBSERVABLES, "timeshift", "off");
 
     // Settings of the above observables (stored with the simulation parameters)
+    sim["physical_output_only"] = reader.GetBoolean(Sections::OBSERVABLES, "physical_output_only", false);
     sim["n_perm_samples"] = reader.GetInteger(Sections::OBSERVABLES, "n_perm_samples", 1);
     if (int n = std::get<int>(sim["n_perm_samples"]); n < 1)
         throw std::invalid_argument(std::format("The number of permutation samples ({}) must be positive!", n));

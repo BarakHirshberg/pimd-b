@@ -72,6 +72,8 @@ void PermutationObservable::calculate() {
     double n_cycles = 0.0, cycle_max = 0.0, p_exch = 0.0, w2 = 0.0;
     std::vector<int> visited(sim.natoms);
 
+    // Gate accumulation only: preserve every RNG draw and instantaneous observable.
+    const bool accumulate = !sim.physical_output_only || sim.physicalOutputEligible();
     for (int s = 0; s < nsamples; ++s) {
         sim.bosonic_exchange->samplePermutation(perm, gen);
 
@@ -88,9 +90,9 @@ void PermutationObservable::calculate() {
             ++ncyc;
             longest = std::max(longest, length);
             if (length >= 2) in_exchange += length;
-            hist[length - 1] += 1;
+            if (accumulate) hist[length - 1] += 1;
         }
-        ++total_samples;
+        if (accumulate) ++total_samples;
         n_cycles += ncyc;
         cycle_max += longest;
         p_exch += static_cast<double>(in_exchange) / sim.natoms;

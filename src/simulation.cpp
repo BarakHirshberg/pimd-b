@@ -67,6 +67,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     mars_gen = std::make_unique<RanMars>(params_seed + rank);
 
     getVariant(param_obj.sim["n_perm_samples"], n_perm_samples);
+    getVariant(param_obj.sim["physical_output_only"], physical_output_only);
     getVariant(param_obj.sim["rdf_bins"], rdf_bins);
     getVariant(param_obj.sim["rdf_rmax"], rdf_rmax);
     getVariant(param_obj.sim["gsf_alpha"], gsf_alpha);
@@ -255,8 +256,8 @@ void Simulation::run() {
             observable->resetValues();
         }
 
-        for (const auto& state : states) {
-            state->output(step);
+        if (!physical_output_only) {
+            for (const auto& state : states) state->output(step);
         }
         thermostat->step();
 
@@ -301,6 +302,16 @@ void Simulation::run() {
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
         if (step < threshold) {
             continue;
+        }
+
+        // Opt-in output is aligned with the post-move scalar measurements, never a prior gamma.
+        if (physical_output_only) {
+            // Wang-Landau bookkeeping lives on rank zero; all beads must share its decision.
+            int eligible = (this_bead == 0 && physicalOutputEligible()) ? 1 : 0;
+            MPI_Bcast(&eligible, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            if (eligible) {
+                for (const auto& state : states) state->output(step);
+            }
         }
 
         // Calculate the observables (production stage)
@@ -1069,4 +1080,9 @@ void Simulation::printDebug(const std::string& text, int target_bead) const {
         debug << text;
         debug.close();
     }
+}
+
+/** @brief Physical state output requires gamma=1 and nonadaptive weights. */
+bool Simulation::physicalOutputEligible() const {
+    return soft_link_gamma == 1.0 && (!soft_link_move || soft_link_move->wlStep() == 0.0);
 }
