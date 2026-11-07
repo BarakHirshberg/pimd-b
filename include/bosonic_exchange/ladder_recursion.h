@@ -32,10 +32,17 @@
  *
  * with w(u,v) = c_u (prod_{i=u}^{v-2} L[i]) d_v, where c_u = B[u] (u odd) or R[u] (u even) and
  * d_v = R[v-1] (v even) or B[v-1] (v odd). Each candidate plays exactly one role, so the total
- * weight alpha_N is multilinear in the kernels and a forward pass (alpha, O) plus a backward pass
- * (alpha~, R) give alpha_N, every link probability p_K = K dalpha_N/dK / alpha_N, and an exact
- * conditional sampler, all in O(N) time and memory. Everything is in log space; every sum has two
- * terms. Derivation: docs/12_linear_ladder_exchange.md of the benchmark repository.
+ * weight alpha_N is multilinear in the kernels and a forward pass (alpha, O) plus a reverse sweep
+ * give alpha_N, every link probability p_K = K dalpha_N/dK / alpha_N, and an exact conditional
+ * sampler, all in O(N) time and memory. Every sum has two terms. Derivation:
+ * docs/12_linear_ladder_exchange.md of the benchmark repository.
+ *
+ * Numerics: the forward pass carries only the O(1) local ratios r_m = ln(alpha_m / alpha_(m-1)) and
+ * o_m = ln(O_m / alpha_(m-1)), and the reverse sweep splits each node's probability between two
+ * locally normalized branches. No probability is formed from extensive logarithms such as
+ * ln alpha_m + ln alpha~_(m+1) - ln alpha_N, whose separately accumulated rounding grows with
+ * N |ln K| (with every kernel e^-100 at N = 4e6 that gives endpoint sums of 1 + 5.6e-3; this form
+ * stays within 3e-13). ln alpha_N = r_1 + ... + r_N is summed with compensation.
  *
  * The class knows nothing about coordinates: it takes log kernels (-beta E per link) and returns
  * log alpha_N (= -beta V), the link probabilities and samples of the ladder permutation.
@@ -46,7 +53,8 @@ public:
         if (n < 1) throw std::invalid_argument("LadderRecursion needs at least one particle");
         lS.assign(n, 0.0); lB.assign(std::max(n - 1, 0), 0.0);
         lR.assign(std::max(n - 1, 0), 0.0); lL.assign(std::max(n - 2, 0), 0.0);
-        A.assign(n + 1, NEG); O.assign(n + 1, NEG); AT.assign(n + 1, NEG); RR.assign(n, NEG);
+        r.assign(n + 1, 0.0); o.assign(n + 1, NEG); A.assign(n + 1, 0.0);
+        ga.assign(n + 1, 0.0); gO.assign(n + 1, 0.0);
         pS_.assign(n, 0.0); pB_.assign(std::max(n - 1, 0), 0.0);
         pR_.assign(std::max(n - 1, 0), 0.0); pL_.assign(std::max(n - 2, 0), 0.0);
     }
@@ -54,7 +62,7 @@ public:
     [[nodiscard]] int size() const { return n; }
 
     /**
-     * Runs both passes for the given log kernels (sizes N, N-1, N-1, N-2).
+     * Runs the forward pass and the reverse sweep for the given log kernels (sizes N, N-1, N-1, N-2).
      */
     void compute(const std::vector<double>& logS, const std::vector<double>& logB,
                  const std::vector<double>& logR, const std::vector<double>& logL) {
@@ -64,42 +72,57 @@ public:
         }
         lS = logS; lB = logB; lR = logR; lL = logL;
 
-        // Forward pass. A[m]: compositions of the prefix of m labels (0..m-1). O[m] (m >= 2): open
+        // Forward pass. alpha_m: compositions of the prefix of m labels (0..m-1). O_m (m >= 2): open
         // blocks [u, m-1] with u <= m-2, extended through the rung (m-3, m-1) but not yet closed.
-        A[0] = 0.0;
-        A[1] = lS[0];
-        for (int m = 2; m <= n; ++m) {
-            O[m] = (m == 2) ? A[0] + logc(0) : lse(O[m - 1] + lL[m - 3], A[m - 2] + logc(m - 2));
-            A[m] = lse(A[m - 1] + lS[m - 1], O[m] + logd(m - 1)) - std::log(static_cast<double>(m));
-        }
-
-        // Backward pass. AT[m]: compositions of the suffix m..n-1 (block ending at label v carries
-        // 1/(v+1)). RR[u] = sum_{v >= u+1} (prod_{i=u}^{v-2} L[i]) d_v AT[v+1] / (v+1).
-        AT[n] = 0.0;
-        for (int u = n - 1; u >= 0; --u) {
-            if (u <= n - 2) {
-                const double close_next = logd(u + 1) + AT[u + 2] - std::log(static_cast<double>(u + 2));
-                RR[u] = (u <= n - 3) ? lse(close_next, lL[u] + RR[u + 1]) : close_next;
+        //   O_m = O_(m-1) L[m-3] + alpha_(m-2) c_(m-2),   alpha_m = [alpha_(m-1) S[m-1] + O_m d_(m-1)] / m,
+        // carried as r_m = ln(alpha_m / alpha_(m-1)) and o_m = ln(O_m / alpha_(m-1)).
+        double sum = 0.0, comp = 0.0;  // Neumaier summation of ln alpha_m = r_1 + ... + r_m
+        for (int m = 1; m <= n; ++m) {
+            if (m == 1) {
+                r[1] = lS[0];
             } else {
-                RR[u] = NEG;
+                o[m] = ((m == 2) ? logc(0) : lse(o[m - 1] + lL[m - 3], logc(m - 2))) - r[m - 1];
+                r[m] = lse(lS[m - 1], o[m] + logd(m - 1)) - std::log(static_cast<double>(m));
             }
-            const double single = lS[u] + AT[u + 1] - std::log(static_cast<double>(u + 1));
-            AT[u] = (u <= n - 2) ? lse(single, logc(u) + RR[u]) : single;
+            const double t = sum + r[m];
+            comp += (std::abs(sum) >= std::abs(r[m])) ? (sum - t) + r[m] : (r[m] - t) + sum;
+            sum = t;
+            A[m] = sum + comp;
         }
 
-        // Link probabilities (multilinearity: p_K = K dalpha/dK / alpha).
-        const double lz = A[n];
-        for (int v = 0; v < n; ++v) {
-            pS_[v] = std::exp(A[v] + lS[v] + AT[v + 1] - std::log(static_cast<double>(v + 1)) - lz);
-        }
-        for (int a = 0; a < n - 1; ++a) {
-            // c at u = a  (block starting at a, a <= n-2) and d at v = a+1 (block ending at a+1)
-            const double pc = std::exp(A[a] + logc(a) + RR[a] - lz);
-            const double pd = std::exp(O[a + 2] + logd(a + 1) + AT[a + 2] - std::log(static_cast<double>(a + 2)) - lz);
-            if (a % 2 == 1) { pB_[a] = pc; pR_[a] = pd; } else { pR_[a] = pc; pB_[a] = pd; }
-        }
-        for (int i = 0; i < n - 2; ++i) {
-            pL_[i] = std::exp(O[i + 2] + lL[i] + RR[i + 1] - lz);
+        // Reverse sweep (multilinearity: p_K = K dalpha_N/dK / alpha_N). ga[m] = d ln alpha_N / d ln alpha_m
+        // is the probability that a block ends at label m-1, gO[m] that the open block O_m is used.
+        // Each node splits its probability between its two locally normalized branches.
+        std::fill(ga.begin(), ga.end(), 0.0);
+        std::fill(gO.begin(), gO.end(), 0.0);
+        std::fill(pS_.begin(), pS_.end(), 0.0);
+        std::fill(pB_.begin(), pB_.end(), 0.0);
+        std::fill(pR_.begin(), pR_.end(), 0.0);
+        std::fill(pL_.begin(), pL_.end(), 0.0);
+        ga[n] = 1.0;
+        for (int m = n; m >= 1; --m) {
+            if (m == 1) {
+                pS_[0] += ga[1];
+                ga[0] += ga[1];
+                continue;
+            }
+            double p_single, p_close;  // m alpha_m / alpha_(m-1) = S[m-1] + e^(o_m) d_(m-1)
+            branch(lS[m - 1], o[m] + logd(m - 1), p_single, p_close);
+            pS_[m - 1] += ga[m] * p_single;
+            ga[m - 1] += ga[m] * p_single;
+            dProb(m - 1) += ga[m] * p_close;
+            gO[m] += ga[m] * p_close;
+            if (m == 2) {
+                cProb(0) += gO[2];
+                ga[0] += gO[2];
+            } else {
+                double p_ext, p_start;  // O_m / alpha_(m-2) = e^(o_(m-1)) L[m-3] + c_(m-2)
+                branch(o[m - 1] + lL[m - 3], logc(m - 2), p_ext, p_start);
+                pL_[m - 3] += gO[m] * p_ext;
+                gO[m - 1] += gO[m] * p_ext;
+                cProb(m - 2) += gO[m] * p_start;
+                ga[m - 2] += gO[m] * p_start;
+            }
         }
     }
 
@@ -107,8 +130,6 @@ public:
     [[nodiscard]] double logAlphaN() const { return A[n]; }
     /// ln alpha_m for the prefix of m labels
     [[nodiscard]] double logAlpha(int m) const { return A[m]; }
-    /// ln alpha~_0, which must equal ln alpha_N (consistency of the two passes)
-    [[nodiscard]] double logAlphaTilde0() const { return AT[0]; }
 
     [[nodiscard]] const std::vector<double>& pS() const { return pS_; }
     [[nodiscard]] const std::vector<double>& pB() const { return pB_; }
@@ -175,7 +196,8 @@ public:
      * returns the corresponding ladder permutation. O(N) per sample: from the top, the block ending
      * at the current label is a singleton with probability alpha_{m-1} s / (m alpha_m), otherwise
      * an open block whose start is found by walking the O recursion down one label at a time
-     * ("extended" with probability O_{m-1} L_{m-3} / O_m, "started at m-2" otherwise).
+     * ("extended" with probability O_{m-1} L_{m-3} / O_m, "started at m-2" otherwise). Both are the
+     * locally normalized branches of the reverse sweep.
      */
     template <class Generator>
     void sample(std::vector<int>& perm, Generator& gen) const {
@@ -184,8 +206,8 @@ public:
         int m = n;
         while (m > 0) {
             const int v = m - 1;
-            const double p_single = (m == 1) ? 1.0
-                : std::exp(A[m - 1] + lS[v] - std::log(static_cast<double>(m)) - A[m]);
+            double p_single = 1.0, p_close = 0.0;
+            if (m > 1) branch(lS[v], o[m] + logd(v), p_single, p_close);
             if (uniform(gen) < p_single) {
                 perm[v] = v;
                 m -= 1;
@@ -195,7 +217,8 @@ public:
             int u = 0;
             while (true) {
                 if (mm == 2) { u = 0; break; }
-                const double p_ext = std::exp(O[mm - 1] + lL[mm - 3] - O[mm]);
+                double p_ext, p_start;
+                branch(o[mm - 1] + lL[mm - 3], logc(mm - 2), p_ext, p_start);
                 if (uniform(gen) < p_ext) {
                     mm -= 1;
                 } else {
@@ -218,13 +241,26 @@ private:
         return hi + std::log1p(std::exp(std::min(a, b) - hi));
     }
 
+    /// Probabilities of two branches with log weights a and b, normalized locally.
+    static void branch(double a, double b, double& pa, double& pb) {
+        const double hi = std::max(a, b);
+        if (hi == NEG) { pa = pb = 0.0; return; }
+        const double ea = std::exp(a - hi), eb = std::exp(b - hi);
+        pa = ea / (ea + eb);
+        pb = eb / (ea + eb);
+    }
+
     /// Start link of a block beginning at u (u <= n-2): B[u] for u odd, R[u] for u even.
     [[nodiscard]] double logc(int u) const { return (u % 2 == 1) ? lB[u] : lR[u]; }
     /// Top link of a block ending at v (v >= 1): R[v-1] for v even, B[v-1] for v odd.
     [[nodiscard]] double logd(int v) const { return (v % 2 == 0) ? lR[v - 1] : lB[v - 1]; }
+    /// Probabilities of the same two links (the reverse sweep accumulates into them).
+    double& cProb(int u) { return (u % 2 == 1) ? pB_[u] : pR_[u]; }
+    double& dProb(int v) { return (v % 2 == 0) ? pR_[v - 1] : pB_[v - 1]; }
 
     int n;
     std::vector<double> lS, lB, lR, lL;
-    std::vector<double> A, O, AT, RR;
+    std::vector<double> r, o, A;   // local ratios r_m, o_m and the compensated prefix sums ln alpha_m
+    std::vector<double> ga, gO;    // reverse-sweep probabilities of alpha_m and O_m
     std::vector<double> pS_, pB_, pR_, pL_;
 };

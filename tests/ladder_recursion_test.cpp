@@ -1,10 +1,11 @@
 // Unit tests of LadderRecursion against brute force. Build with -DBUILD_LADDER_TESTS=ON.
 //   1. ln alpha_N against the explicit sum over compositions (ladder cycles, 1/(v+1) weights) for
-//      N = 1..7 with random kernels; forward and backward passes agree (alpha~_0 = alpha_N).
+//      N = 1..7 with random kernels.
 //   2. Link probabilities against central differences of ln alpha_N in each log kernel.
 //   3. Each particle's outgoing and incoming probabilities sum to one.
 //   4. With all kernels equal to one the sampled cycle-type frequencies equal |C_lambda| / N!, and
 //      with random kernels the sampled composition frequencies equal their exact weights.
+//   5. Large N: with every kernel e^-q, ln alpha_N = -qN and the sums of 3. hold to 1e-12.
 #include <cstdio>
 #include <map>
 #include <random>
@@ -124,8 +125,6 @@ int main() {
             const double brute = lse(terms);
             check(std::abs(brute - lad.logAlphaN()) < 1e-10,
                   "brute force vs recursion, N = " + std::to_string(n) + ": " + std::to_string(brute) + " vs " + std::to_string(lad.logAlphaN()));
-            check(std::abs(lad.logAlphaTilde0() - lad.logAlphaN()) < 1e-10,
-                  "backward pass, N = " + std::to_string(n));
 
             // finite differences: d ln alpha / d logK = p_K
             const double h = 1e-5;
@@ -221,19 +220,42 @@ int main() {
         }
     }
 
-    // N = 64 with strongly varying kernels: finite, consistent passes (numerical stability)
+    // N = 64 with strongly varying kernels: finite, normalized (numerical stability)
     {
         const int n = 64;
         Kernels k = randomKernels(n, gen, 40.0);
         LadderRecursion lad(n);
         lad.compute(k.S, k.B, k.R, k.L);
         check(std::isfinite(lad.logAlphaN()), "N = 64 finite");
-        check(std::abs(lad.logAlphaTilde0() - lad.logAlphaN()) < 1e-8 * std::abs(lad.logAlphaN()), "N = 64 passes agree");
         for (int l = 0; l < n; ++l) {
             double out = 0.0;
             for (int u = 0; u < n; ++u) out += lad.connectionProbability(l, u);
             check(std::abs(out - 1.0) < 1e-9, "N = 64 outgoing sum l = " + std::to_string(l));
         }
+    }
+
+    // 5: every kernel e^-q. Each composition has N links and the coefficients sum to one, so
+    // ln alpha_N = -qN exactly and every endpoint's probabilities sum to one. Probabilities formed
+    // from separately accumulated extensive logarithms drift here (5e-7 at N = 2e5, q = 100).
+    for (double q : {1.0, 100.0}) {
+        const int n = 200000;
+        LadderRecursion lad(n);
+        lad.compute(std::vector<double>(n, -q), std::vector<double>(n - 1, -q), std::vector<double>(n - 1, -q),
+                    std::vector<double>(n - 2, -q));
+        double worst = 0.0;
+        for (int l = 0; l < n; ++l) {
+            double out = 0.0, in = 0.0;
+            for (int u = std::max(0, l - 2); u <= std::min(n - 1, l + 2); ++u) {
+                out += lad.connectionProbability(l, u);
+                in += lad.connectionProbability(u, l);
+            }
+            worst = std::max({worst, std::abs(out - 1.0), std::abs(in - 1.0)});
+        }
+        const double action_error = std::abs(lad.logAlphaN() + q * n) / (q * n);
+        char msg[160];
+        std::snprintf(msg, sizeof msg, "kernels e^-%g, N = %d: endpoint sums off by %.1e, relative ln alpha_N error %.1e",
+                      q, n, worst, action_error);
+        check(worst < 1e-12 && action_error < 1e-13, msg);
     }
 
     if (failures == 0) std::printf("ladder_recursion_test: all checks passed\n");
